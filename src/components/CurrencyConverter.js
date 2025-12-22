@@ -22,20 +22,20 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
     const [copiedBs, setCopiedBs] = useState(false);
 
     // Helper functions for formatting
+    // Helper functions for formatting
     const parseCurrency = (value) => {
         if (!value) return 0;
-        // Remove dots (thousands) and replace comma with dot (decimal)
-        const normalized = value.replace(/\./g, '').replace(',', '.');
-        const parsed = parseFloat(normalized);
+        // Clean string: keep only numbers
+        const digits = value.replace(/\D/g, '');
+        const parsed = parseFloat(digits) / 100;
         return isNaN(parsed) ? 0 : parsed;
     };
 
     const formatCurrency = (value) => {
-        if (value === 0 || value === '0') return ''; // Optional: decide if 0 should be shown
-        // Fix to 2 decimals
-        const num = parseFloat(value);
-        if (isNaN(num)) return '';
+        if (value === 0 || isNaN(value)) return '';
 
+        let num = parseFloat(value);
+        // Ensure 2 decimals
         let [integer, decimal] = num.toFixed(2).split('.');
 
         // Add thousands separators
@@ -56,37 +56,53 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
     const currentRate = getCurrentRate();
 
     const handleForeignChange = (val) => {
-        setForeignAmount(val);
-        if (val === '') {
+        // Strip everything but numbers
+        const digits = val.replace(/\D/g, '');
+
+        if (digits === '' || parseInt(digits) === 0) {
+            setForeignAmount('');
             setBsAmount('');
             return;
         }
-        const num = parseCurrency(val);
-        if (num > 0) {
-            setBsAmount(formatCurrency(num * currentRate));
-        } else {
-            setBsAmount('');
+
+        const rawValue = parseFloat(digits) / 100; // 123 -> 1.23
+        setForeignAmount(formatCurrency(rawValue));
+
+        if (rawValue > 0) {
+            setBsAmount(formatCurrency(rawValue * currentRate));
         }
     };
 
     const handleBsChange = (val) => {
-        setBsAmount(val);
-        if (val === '') {
+        // Strip everything but numbers
+        const digits = val.replace(/\D/g, '');
+
+        if (digits === '' || parseInt(digits) === 0) {
+            setBsAmount('');
             setForeignAmount('');
             return;
         }
-        const num = parseCurrency(val);
-        if (num > 0) {
-            setForeignAmount(formatCurrency(num / currentRate));
-        } else {
-            setForeignAmount('');
+
+        const rawValue = parseFloat(digits) / 100;
+        setBsAmount(formatCurrency(rawValue));
+
+        if (rawValue > 0) {
+            setForeignAmount(formatCurrency(rawValue / currentRate));
         }
     };
 
     useEffect(() => {
-        const num = parseCurrency(foreignAmount);
-        if (num > 0) {
-            setBsAmount(formatCurrency(num * currentRate));
+        // Recalculate based on current foreign amount text
+        if (!foreignAmount) return;
+
+        // Check if we need to parse it as raw input or if it's already formatted
+        // Actually, foreignAmount is always formatted or empty in this new logic.
+        const digits = foreignAmount.replace(/\D/g, '');
+        if (digits) {
+            const rawValue = parseFloat(digits) / 100;
+            if (rawValue > 0) {
+                setBsAmount(formatCurrency(rawValue * currentRate));
+            }
         }
     }, [selectedCurrency, useTomorrow, rates]);
 
@@ -177,7 +193,7 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
                             style={styles.input}
                             value={foreignAmount}
                             onChangeText={handleForeignChange}
-                            keyboardType="decimal-pad"
+                            keyboardType="number-pad"
                             placeholder="0.00"
                             placeholderTextColor={COLORS.textSecondary}
                         />
@@ -203,7 +219,7 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
                             style={[styles.input, { color: COLORS.bcvGreen }]}
                             value={bsAmount}
                             onChangeText={handleBsChange}
-                            keyboardType="decimal-pad"
+                            keyboardType="number-pad"
                             placeholder="0.00"
                             placeholderTextColor={COLORS.textSecondary}
                         />
