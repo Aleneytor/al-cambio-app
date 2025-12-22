@@ -157,7 +157,7 @@ const SettingsScreen = ({ navigation }) => {
                 ))}
 
                 <View style={styles.footer}>
-                    <Text style={styles.versionText}>Al Cambio App v0.6.5</Text>
+                    <Text style={styles.versionText}>Al Cambio App v1.0.0</Text>
                     <Text style={styles.creatorText}>© 2025 - Tu aliado financiero</Text>
                 </View>
             </ScrollView>
