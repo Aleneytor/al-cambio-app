@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { ArrowLeftRight, Calendar, Copy, Check } from 'lucide-react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Share } from 'react-native';
+import { ArrowLeftRight, Calendar, Copy, Check, RotateCcw, Share2 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '../theme/colors';
 
@@ -17,11 +17,20 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
         }
     }, [initialCurrency]);
 
+    const getActiveColor = () => {
+        switch (selectedCurrency) {
+            case 'eur': return COLORS.euroBlue;
+            case 'parallel': return COLORS.parallelOrange;
+            default: return COLORS.bcvGreen;
+        }
+    };
+
+    const activeColor = getActiveColor();
+
     // States for "copied" feedback
     const [copiedForeign, setCopiedForeign] = useState(false);
     const [copiedBs, setCopiedBs] = useState(false);
 
-    // Helper functions for formatting
     // Helper functions for formatting
     const parseCurrency = (value) => {
         if (!value) return 0;
@@ -119,6 +128,40 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
         }
     };
 
+    const handleReset = () => {
+        setForeignAmount('1,00');
+        // Trigger recalculation effectively or set manually
+        const digits = '100'; // 1.00
+        const rawValue = 1.00;
+        setBsAmount(formatCurrency(rawValue * currentRate));
+    };
+
+    const handleShare = async () => {
+        try {
+            const today = new Date();
+            const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+
+            const dateStr = useTomorrow && hasNextRates ?
+                `${getFriendlyNextDate()} (${rates.nextRates.date.substring(0, 5)})` :
+                `Hoy (${formattedToday})`;
+
+            const currencyName = selectedCurrency === 'parallel' ? 'USDT' : selectedCurrency.toUpperCase();
+
+            const message = `📊 *Cambio al Día* \n\n` +
+                `💵 *${foreignAmount} ${getSymbol()}* (${currencyName})\n` +
+                `🇻🇪 *${bsAmount} Bs*\n\n` +
+                `📈 Tasa: ${formatCurrency(currentRate)} Bs\n` +
+                `📅 Fecha: ${dateStr}\n\n` +
+                `_Calculado con Al Cambio App_`;
+
+            await Share.share({
+                message: message,
+            });
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     const getSymbol = () => {
         if (selectedCurrency === 'eur') return '€';
         return '$';
@@ -152,16 +195,19 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
 
                 {hasNextRates && (
                     <TouchableOpacity
-                        style={[styles.tomorrowToggle, useTomorrow && styles.tomorrowToggleActive]}
+                        style={[styles.tomorrowToggle, useTomorrow && {
+                            backgroundColor: `${activeColor}15`, // 10% opacity
+                            borderColor: `${activeColor}40` // 25% opacity
+                        }]}
                         onPress={() => setUseTomorrow(!useTomorrow)}
                         activeOpacity={0.7}
                     >
-                        <Calendar size={14} color={useTomorrow ? COLORS.bcvGreen : COLORS.textSecondary} />
+                        <Calendar size={14} color={useTomorrow ? activeColor : COLORS.textSecondary} />
                         <View style={{ marginLeft: 8 }}>
-                            <Text style={[styles.tomorrowToggleSubtitle, useTomorrow && { color: 'rgba(52, 199, 89, 0.7)' }]}>
+                            <Text style={[styles.tomorrowToggleSubtitle, useTomorrow && { color: activeColor }]}>
                                 {useTomorrow ? 'Usando' : 'Ver'}
                             </Text>
-                            <Text style={[styles.tomorrowToggleText, useTomorrow && styles.tomorrowToggleTextActive]}>
+                            <Text style={[styles.tomorrowToggleText, useTomorrow && { color: activeColor }]}>
                                 {getFriendlyNextDate()} ({rates.nextRates.date.substring(0, 5)})
                             </Text>
                         </View>
@@ -171,17 +217,33 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
 
             {/* Currency Selector */}
             <View style={styles.selectorContainer}>
-                {['usd', 'eur', 'parallel'].map((curr) => (
-                    <TouchableOpacity
-                        key={curr}
-                        style={[styles.chip, selectedCurrency === curr && styles.activeChip]}
-                        onPress={() => setSelectedCurrency(curr)}
-                    >
-                        <Text style={[styles.chipText, selectedCurrency === curr && styles.activeChipText]}>
-                            {curr === 'parallel' ? 'Promedio USDT' : `${curr.toUpperCase()} BCV`}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+                {['usd', 'eur', 'parallel'].map((curr) => {
+                    const isSelected = selectedCurrency === curr;
+                    let chipColor = COLORS.bcvGreen;
+                    if (curr === 'eur') chipColor = COLORS.euroBlue;
+                    if (curr === 'parallel') chipColor = COLORS.parallelOrange;
+
+                    return (
+                        <TouchableOpacity
+                            key={curr}
+                            style={[
+                                styles.chip,
+                                isSelected && {
+                                    backgroundColor: `${chipColor}26`, // 15% opacity
+                                    borderColor: chipColor
+                                }
+                            ]}
+                            onPress={() => setSelectedCurrency(curr)}
+                        >
+                            <Text style={[
+                                styles.chipText,
+                                isSelected && { color: chipColor }
+                            ]}>
+                                {curr === 'parallel' ? 'Promedio USDT' : `${curr.toUpperCase()} BCV`}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
             </View>
 
             <View style={styles.converterBox}>
@@ -199,10 +261,10 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
                         />
                     </View>
                     <TouchableOpacity
-                        style={[styles.copyButton, copiedForeign && styles.copyButtonSuccess]}
+                        style={[styles.copyButton, copiedForeign && { backgroundColor: `${activeColor}1A` }]}
                         onPress={() => copyToClipboard(foreignAmount, 'foreign')}
                     >
-                        {copiedForeign ? <Check size={16} color={COLORS.bcvGreen} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                        {copiedForeign ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
                     </TouchableOpacity>
                     <Text style={styles.currencySubLabel}>{getCurrencyLabel()}</Text>
                 </View>
@@ -216,7 +278,7 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
                     <View style={styles.inputWrapper}>
                         <Text style={styles.inputLabel}>Bs</Text>
                         <TextInput
-                            style={[styles.input, { color: COLORS.bcvGreen }]}
+                            style={[styles.input, { color: activeColor }]}
                             value={bsAmount}
                             onChangeText={handleBsChange}
                             keyboardType="number-pad"
@@ -225,20 +287,34 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
                         />
                     </View>
                     <TouchableOpacity
-                        style={[styles.copyButton, copiedBs && styles.copyButtonSuccess]}
+                        style={[styles.copyButton, copiedBs && { backgroundColor: `${activeColor}1A` }]}
                         onPress={() => copyToClipboard(bsAmount, 'bs')}
                     >
-                        {copiedBs ? <Check size={16} color={COLORS.bcvGreen} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                        {copiedBs ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
                     </TouchableOpacity>
                     <Text style={styles.currencySubLabel}>BOLÍVARES</Text>
                 </View>
             </View>
 
             <Text style={styles.rateInfo}>
-                Tasa aplicada: <Text style={{ fontWeight: 'bold', color: useTomorrow && hasNextRates ? COLORS.bcvGreen : COLORS.textPrimary }}>
+                Tasa aplicada: <Text style={{ fontWeight: 'bold', color: useTomorrow && hasNextRates ? activeColor : COLORS.textPrimary }}>
                     {formatCurrency(currentRate)} Bs {useTomorrow && hasNextRates ? `(${getFriendlyNextDate()})` : '(Hoy)'}
                 </Text>
             </Text>
+
+            <View style={styles.actionRow}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleReset}>
+                    <RotateCcw size={18} color={COLORS.textSecondary} />
+                    <Text style={styles.actionButtonText}>Reiniciar</Text>
+                </TouchableOpacity>
+
+                <View style={styles.actionDivider} />
+
+                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+                    <Share2 size={18} color={activeColor} />
+                    <Text style={[styles.actionButtonText, { color: activeColor }]}>Compartir</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
@@ -269,16 +345,11 @@ const styles = StyleSheet.create({
     tomorrowToggle: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.05)',
         paddingHorizontal: 12,
         paddingVertical: 8,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-    },
-    tomorrowToggleActive: {
-        backgroundColor: 'rgba(52, 199, 89, 0.1)',
-        borderColor: 'rgba(52, 199, 89, 0.3)',
+        borderColor: 'transparent',
     },
     tomorrowToggleSubtitle: {
         color: COLORS.textSecondary,
@@ -292,9 +363,6 @@ const styles = StyleSheet.create({
         color: COLORS.textSecondary,
         fontSize: 12,
         fontWeight: '700',
-    },
-    tomorrowToggleTextActive: {
-        color: COLORS.bcvGreen,
     },
     selectorContainer: {
         flexDirection: 'row',
@@ -310,18 +378,11 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'transparent',
     },
-    activeChip: {
-        backgroundColor: 'rgba(52, 199, 89, 0.15)',
-        borderColor: COLORS.bcvGreen,
-    },
     chipText: {
         color: COLORS.textSecondary,
         fontSize: 12,
         fontWeight: '600',
         textAlign: 'center',
-    },
-    activeChipText: {
-        color: COLORS.bcvGreen,
     },
     converterBox: {
         backgroundColor: 'rgba(0,0,0,0.2)',
@@ -357,9 +418,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.03)',
         marginHorizontal: 8,
     },
-    copyButtonSuccess: {
-        backgroundColor: 'rgba(52, 199, 89, 0.1)',
-    },
     currencySubLabel: {
         color: COLORS.textSecondary,
         fontSize: 10,
@@ -381,6 +439,36 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 16,
         textAlign: 'center',
+        marginBottom: 4,
+    },
+    actionRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 16,
+        padding: 4,
+        alignSelf: 'center',
+        gap: 4
+    },
+    actionButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        gap: 8,
+        borderRadius: 12,
+    },
+    actionDivider: {
+        width: 1,
+        height: 20,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+    },
+    actionButtonText: {
+        color: COLORS.textSecondary,
+        fontSize: 14,
+        fontWeight: '600',
     }
 });
 

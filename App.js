@@ -44,19 +44,25 @@ function SettingsStack() {
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={{
-        tabBarActiveTintColor: '#34c759',
-        tabBarInactiveTintColor: '#8e8e93',
-        tabBarLabelStyle: { fontSize: 13, fontWeight: '700', textTransform: 'none' },
-        tabBarIndicatorStyle: { backgroundColor: '#34c759', height: 3, borderRadius: 2 },
-        tabBarStyle: {
-          backgroundColor: '#2c2c2e',
-          elevation: 0,
-          shadowOpacity: 0,
-          borderBottomWidth: 1,
-          borderBottomColor: 'rgba(255,255,255,0.05)',
-        },
-        tabBarPressColor: 'rgba(52, 199, 89, 0.1)',
+      screenOptions={({ route }) => {
+        let activeColor = COLORS.bcvGreen;
+        if (route.name === 'Calculadora') activeColor = COLORS.euroBlue;
+        if (route.name === 'Ajustes') activeColor = COLORS.parallelOrange;
+
+        return {
+          tabBarActiveTintColor: activeColor,
+          tabBarInactiveTintColor: '#8e8e93',
+          tabBarLabelStyle: { fontSize: 13, fontWeight: '700', textTransform: 'none' },
+          tabBarIndicatorStyle: { backgroundColor: activeColor, height: 3, borderRadius: 2 },
+          tabBarStyle: {
+            backgroundColor: '#2c2c2e',
+            elevation: 0,
+            shadowOpacity: 0,
+            borderBottomWidth: 1,
+            borderBottomColor: 'rgba(255,255,255,0.05)',
+          },
+          tabBarPressColor: `${activeColor}1A`,
+        };
       }}
     >
       <Tab.Screen name="Inicio" component={HomeScreen} />
