@@ -5,7 +5,7 @@ import * as Clipboard from 'expo-clipboard';
 import { COLORS } from '../theme/colors';
 
 const CurrencyConverter = ({ rates, initialCurrency }) => {
-    const [foreignAmount, setForeignAmount] = useState('1');
+    const [foreignAmount, setForeignAmount] = useState('1,00');
     const [bsAmount, setBsAmount] = useState('');
     const [selectedCurrency, setSelectedCurrency] = useState(initialCurrency || 'usd'); // usd, eur, parallel
     const [useTomorrow, setUseTomorrow] = useState(false);

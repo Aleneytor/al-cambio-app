@@ -9,6 +9,13 @@ const ConverterScreen = ({ route }) => {
     const { rates, refreshRates, loading } = useRates();
     const initialCurrency = route.params?.initialCurrency; // Get param
 
+    const [resetKey, setResetKey] = React.useState(0);
+
+    const handleRefresh = () => {
+        refreshRates(true);
+        setResetKey(prev => prev + 1);
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -18,7 +25,7 @@ const ConverterScreen = ({ route }) => {
                 </View>
                 <TouchableOpacity
                     style={styles.refreshButton}
-                    onPress={() => refreshRates(true)}
+                    onPress={handleRefresh}
                     disabled={loading}
                 >
                     <RefreshCcw color={COLORS.textPrimary} size={20} style={loading ? { opacity: 0.5 } : {}} />
@@ -30,7 +37,7 @@ const ConverterScreen = ({ route }) => {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
-                <CurrencyConverter rates={rates} initialCurrency={initialCurrency} />
+                <CurrencyConverter key={resetKey} rates={rates} initialCurrency={initialCurrency} />
 
                 <View style={styles.infoBox}>
                     <Text style={styles.infoText}>
