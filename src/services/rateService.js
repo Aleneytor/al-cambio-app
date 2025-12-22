@@ -196,11 +196,17 @@ async function fetchYadioRates() {
 
 // Helpers
 function getTodayISO() {
-    return new Date().toISOString().split('T')[0];
+    const now = new Date();
+    // Adjust to Venezuela Time (UTC-4) by shifting the timestamp
+    // So that toISOString() (which reads as UTC) outputs the VET date
+    const vetTime = now.getTime() - (4 * 60 * 60 * 1000);
+    return new Date(vetTime).toISOString().split('T')[0];
 }
 
 function getOneWeekAgoDate() {
-    const d = new Date();
+    const now = new Date();
+    const vetTime = now.getTime() - (4 * 60 * 60 * 1000);
+    const d = new Date(vetTime);
     d.setDate(d.getDate() - 8);
     return d.toISOString().split('T')[0];
 }
