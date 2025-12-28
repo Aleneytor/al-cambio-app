@@ -3,10 +3,10 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-nati
 import { useTheme } from '../context/ThemeContext';
 import CurrencyConverter from '../components/CurrencyConverter';
 import { useRates } from '../context/RateContext';
-import { RefreshCcw } from 'lucide-react-native';
+import { RefreshCcw, WifiOff } from 'lucide-react-native';
 
 const ConverterScreen = ({ route }) => {
-    const { rates, refreshRates, loading } = useRates();
+    const { rates, refreshRates, loading, isOffline, getTimeSinceUpdate } = useRates();
     const { colors, isDark } = useTheme();
     const initialCurrency = route.params?.initialCurrency;
 
@@ -15,6 +15,31 @@ const ConverterScreen = ({ route }) => {
     const handleRefresh = () => {
         refreshRates(true);
         setResetKey(prev => prev + 1);
+    };
+
+    const OfflineBanner = () => {
+        if (!isOffline) return null;
+
+        const timeSince = getTimeSinceUpdate();
+
+        return (
+            <View style={[styles.offlineBanner, {
+                backgroundColor: isDark ? 'rgba(255, 149, 0, 0.15)' : 'rgba(255, 149, 0, 0.12)',
+                borderColor: isDark ? 'rgba(255, 149, 0, 0.3)' : 'rgba(255, 149, 0, 0.25)'
+            }]}>
+                <WifiOff size={16} color={colors.parallelOrange} />
+                <View style={styles.offlineTextContainer}>
+                    <Text style={[styles.offlineTitle, { color: colors.parallelOrange }]}>
+                        Sin conexión
+                    </Text>
+                    {timeSince && (
+                        <Text style={[styles.offlineSubtitle, { color: colors.textSecondary }]}>
+                            Tasas de {timeSince}
+                        </Text>
+                    )}
+                </View>
+            </View>
+        );
     };
 
     return (
@@ -41,6 +66,8 @@ const ConverterScreen = ({ route }) => {
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
             >
+                <OfflineBanner />
+
                 <CurrencyConverter key={resetKey} rates={rates} initialCurrency={initialCurrency} />
 
                 <View style={[styles.infoBox, {
@@ -48,7 +75,10 @@ const ConverterScreen = ({ route }) => {
                     borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
                 }]}>
                     <Text style={[styles.infoText, { color: colors.textSecondary }]}>
-                        Esta calculadora utiliza las tasas oficiales del BCV y el promedio del paralelo para realizar los cálculos.
+                        {isOffline
+                            ? 'Estás sin conexión. Las tasas mostradas son las últimas guardadas.'
+                            : 'Esta calculadora utiliza las tasas oficiales del BCV y el promedio del paralelo para realizar los cálculos.'
+                        }
                     </Text>
                 </View>
             </ScrollView>
@@ -97,7 +127,29 @@ const styles = StyleSheet.create({
         fontSize: 13,
         lineHeight: 20,
         textAlign: 'center',
-    }
+    },
+    // Offline Banner Styles
+    offlineBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        gap: 12,
+    },
+    offlineTextContainer: {
+        flex: 1,
+    },
+    offlineTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    offlineSubtitle: {
+        fontSize: 12,
+        marginTop: 2,
+    },
 });
 
 export default ConverterScreen;

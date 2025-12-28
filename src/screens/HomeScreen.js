@@ -1,6 +1,6 @@
 import React, { useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, RefreshControl, FlatList, Animated, Platform } from 'react-native';
-import { Banknote, RefreshCcw, TrendingUp, DollarSign, History, ChevronRight, Info } from 'lucide-react-native';
+import { Banknote, RefreshCcw, TrendingUp, DollarSign, History, ChevronRight, Info, WifiOff } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
 import RateCard from '../components/RateCard';
@@ -9,7 +9,7 @@ import { useRates } from '../context/RateContext';
 import { formatCurrency } from '../utils/formatting';
 
 const HomeScreen = ({ navigation }) => {
-    const { rates, loading, refreshRates, order } = useRates();
+    const { rates, loading, refreshRates, order, isOffline, getTimeSinceUpdate } = useRates();
     const { colors, isDark } = useTheme();
     const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -72,6 +72,37 @@ const HomeScreen = ({ navigation }) => {
         outputRange: [1.1, 1, 0.95],
         extrapolate: 'clamp',
     });
+
+    const OfflineBanner = () => {
+        if (!isOffline) return null;
+
+        const timeSince = getTimeSinceUpdate();
+
+        return (
+            <View style={[styles.offlineBanner, {
+                backgroundColor: isDark ? 'rgba(255, 149, 0, 0.15)' : 'rgba(255, 149, 0, 0.12)',
+                borderColor: isDark ? 'rgba(255, 149, 0, 0.3)' : 'rgba(255, 149, 0, 0.25)'
+            }]}>
+                <WifiOff size={16} color={colors.parallelOrange} />
+                <View style={styles.offlineTextContainer}>
+                    <Text style={[styles.offlineTitle, { color: colors.parallelOrange }]}>
+                        Sin conexión
+                    </Text>
+                    {timeSince && (
+                        <Text style={[styles.offlineSubtitle, { color: colors.textSecondary }]}>
+                            Última actualización {timeSince}
+                        </Text>
+                    )}
+                </View>
+                <TouchableOpacity
+                    onPress={() => refreshRates(true)}
+                    style={[styles.retryButton, { backgroundColor: `${colors.parallelOrange}20` }]}
+                >
+                    <RefreshCcw size={14} color={colors.parallelOrange} />
+                </TouchableOpacity>
+            </View>
+        );
+    };
 
     const Header = (
         <Animated.View
@@ -150,6 +181,7 @@ const HomeScreen = ({ navigation }) => {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
+            <OfflineBanner />
             <Animated.FlatList
                 data={hasData ? cardData : [{ id: 'sk1' }, { id: 'sk2' }, { id: 'sk3' }]}
                 keyExtractor={(item) => item.id}
@@ -265,7 +297,34 @@ const styles = StyleSheet.create({
         marginTop: 12,
         textAlign: 'left',
         opacity: 0.8
-    }
+    },
+    // Offline Banner Styles
+    offlineBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginHorizontal: 20,
+        marginTop: 8,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 14,
+        borderWidth: 1,
+        gap: 12,
+    },
+    offlineTextContainer: {
+        flex: 1,
+    },
+    offlineTitle: {
+        fontSize: 14,
+        fontWeight: '700',
+    },
+    offlineSubtitle: {
+        fontSize: 12,
+        marginTop: 2,
+    },
+    retryButton: {
+        padding: 10,
+        borderRadius: 10,
+    },
 });
 
 export default HomeScreen;

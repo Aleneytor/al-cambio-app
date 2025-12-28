@@ -1,50 +1,75 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from '@react-native-community/netinfo';
 import { fetchAllRates } from '../services/rateService';
 import { INITIAL_RATES } from '../constants/rates';
-import { useToast } from './ToastContext'; // Import useToast
+import { useToast } from './ToastContext';
 
 const RateContext = createContext();
 
 const STORAGE_KEY = '@app_rate_order';
 const RATES_STORAGE_KEY = '@app_rates_cache';
+const LAST_UPDATE_KEY = '@app_last_update_timestamp';
 
 export const RateProvider = ({ children }) => {
     const [rates, setRates] = useState(INITIAL_RATES);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [lastFetched, setLastFetched] = useState(null);
-    const { showToast } = useToast(); // Use the hook
+    const [isOffline, setIsOffline] = useState(false);
+    const [lastSuccessfulUpdate, setLastSuccessfulUpdate] = useState(null);
+    const { showToast } = useToast();
 
     // Default order of cards
     const [order, setOrder] = useState(['usd', 'eur', 'parallel']);
 
-    // ... loadOrder logic unchanged ...
+    // Monitor network connectivity
     useEffect(() => {
-        const loadOrder = async () => {
+        const unsubscribe = NetInfo.addEventListener(state => {
+            const offline = !state.isConnected || !state.isInternetReachable;
+            setIsOffline(offline);
+
+            // If we just came back online, try to refresh
+            if (!offline && isOffline) {
+                refreshRates(true);
+            }
+        });
+
+        // Check initial state
+        NetInfo.fetch().then(state => {
+            setIsOffline(!state.isConnected || !state.isInternetReachable);
+        });
+
+        return () => unsubscribe();
+    }, [isOffline]);
+
+    // Load saved data on mount
+    useEffect(() => {
+        const loadSavedData = async () => {
             try {
+                // Load order
                 const savedOrder = await AsyncStorage.getItem(STORAGE_KEY);
                 if (savedOrder) {
                     setOrder(JSON.parse(savedOrder));
                 }
-            } catch (e) {
-                console.error("Failed to load order", e);
-            }
-        };
 
-        const loadCachedRates = async () => {
-            try {
+                // Load cached rates
                 const cached = await AsyncStorage.getItem(RATES_STORAGE_KEY);
                 if (cached) {
                     setRates(JSON.parse(cached));
                 }
+
+                // Load last update timestamp
+                const lastUpdate = await AsyncStorage.getItem(LAST_UPDATE_KEY);
+                if (lastUpdate) {
+                    setLastSuccessfulUpdate(parseInt(lastUpdate, 10));
+                }
             } catch (e) {
-                console.error("Failed to load cached rates", e);
+                console.error("Failed to load saved data", e);
             }
         };
 
-        loadOrder();
-        loadCachedRates();
+        loadSavedData();
     }, []);
 
     const updateOrder = async (newOrder) => {
@@ -58,8 +83,8 @@ export const RateProvider = ({ children }) => {
 
     const refreshRates = async (force = false) => {
         const now = Date.now();
+
         // Prevent spamming: if force is true but last fetch was less than 15 seconds ago, ignore.
-        // If force is false (auto-refresh), keep the 2-minute cache.
         if (lastFetched && (now - lastFetched < 15000)) {
             if (force) {
                 const remaining = Math.ceil((15000 - (now - lastFetched)) / 1000);
@@ -67,25 +92,69 @@ export const RateProvider = ({ children }) => {
             }
             return;
         }
+
+        // If not force (auto-refresh), keep the 2-minute cache.
         if (!force && lastFetched && (now - lastFetched < 120000)) {
+            return;
+        }
+
+        // Check if offline before attempting
+        const netState = await NetInfo.fetch();
+        if (!netState.isConnected || !netState.isInternetReachable) {
+            setIsOffline(true);
+            if (force) {
+                showToast('Sin conexión a internet', 'error');
+            }
             return;
         }
 
         setLoading(true);
         setError(null);
+
         try {
             const newRates = await fetchAllRates();
             setRates(newRates);
             setLastFetched(Date.now());
-            await AsyncStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(newRates)); // Cache rates
+            setLastSuccessfulUpdate(Date.now());
+            setIsOffline(false);
+
+            // Cache rates and timestamp
+            await AsyncStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(newRates));
+            await AsyncStorage.setItem(LAST_UPDATE_KEY, Date.now().toString());
+
             if (force) showToast('Tasas actualizadas correctamente', 'success');
         } catch (err) {
             setError("No se pudieron actualizar las tasas");
-            showToast('Error al actualizar las tasas', 'error');
+
+            // Check if it's a network error
+            const currentNetState = await NetInfo.fetch();
+            if (!currentNetState.isConnected || !currentNetState.isInternetReachable) {
+                setIsOffline(true);
+                if (force) showToast('Sin conexión a internet', 'error');
+            } else {
+                if (force) showToast('Error al actualizar las tasas', 'error');
+            }
             console.error(err);
         } finally {
             setLoading(false);
         }
+    };
+
+    // Get time since last update in a friendly format
+    const getTimeSinceUpdate = () => {
+        if (!lastSuccessfulUpdate) return null;
+
+        const now = Date.now();
+        const diff = now - lastSuccessfulUpdate;
+
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (days > 0) return `hace ${days} día${days > 1 ? 's' : ''}`;
+        if (hours > 0) return `hace ${hours} hora${hours > 1 ? 's' : ''}`;
+        if (minutes > 0) return `hace ${minutes} min`;
+        return 'hace un momento';
     };
 
     useEffect(() => {
@@ -93,7 +162,17 @@ export const RateProvider = ({ children }) => {
     }, []);
 
     return (
-        <RateContext.Provider value={{ rates, loading, error, refreshRates, order, updateOrder }}>
+        <RateContext.Provider value={{
+            rates,
+            loading,
+            error,
+            refreshRates,
+            order,
+            updateOrder,
+            isOffline,
+            lastSuccessfulUpdate,
+            getTimeSinceUpdate
+        }}>
             {children}
         </RateContext.Provider>
     );

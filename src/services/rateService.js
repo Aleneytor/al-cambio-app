@@ -87,6 +87,36 @@ export const fetchAllRates = async () => {
             parallelUpdateStr = formatTime(new Date());
         }
 
+        // Format the BCV date for display
+        // Note: BCV typically publishes around 5:00pm VET
+        const bcvTypicalTime = '5:00pm';
+        let lastUpdateStr = '';
+        if (currentBCV && currentBCV.date) {
+            const bcvDate = currentBCV.date; // YYYY-MM-DD format
+            const todayISO = getTodayISO();
+
+            // Get yesterday's date
+            const now = new Date();
+            const vetTime = now.getTime() - (4 * 60 * 60 * 1000);
+            const yesterday = new Date(vetTime);
+            yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayISO = yesterday.toISOString().split('T')[0];
+
+            if (bcvDate === todayISO) {
+                lastUpdateStr = `Hoy, ${bcvTypicalTime}`;
+            } else if (bcvDate === yesterdayISO) {
+                lastUpdateStr = `Ayer, ${bcvTypicalTime}`;
+            } else {
+                // Show the actual date with day name
+                const [y, m, d] = bcvDate.split('-');
+                const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                const dayName = dateObj.toLocaleDateString('es-VE', { weekday: 'long' });
+                lastUpdateStr = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} ${d}/${m}, ${bcvTypicalTime}`;
+            }
+        } else {
+            lastUpdateStr = 'Sin datos';
+        }
+
         return {
             bcv: currentBCV ? currentBCV.usd : 0,
             euro: currentBCV ? currentBCV.eur : 0,
@@ -94,15 +124,15 @@ export const fetchAllRates = async () => {
             eurChange: stats.changePercentage?.eur || 0,
             parallel: parallelRate,
             parallelUpdate: parallelUpdateStr,
-            lastUpdate: "Hoy, " + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
+            lastUpdate: lastUpdateStr,
             nextRates: nextBCV ? {
                 date: formatDate(nextBCV.date),
-                rawDate: nextBCV.date, // ISO format for comparison
+                rawDate: nextBCV.date,
                 usd: nextBCV.usd,
                 eur: nextBCV.eur
             } : null,
             history: historyData.slice(0, 7),
-            p2p: p2pData // New P2P data (split)
+            p2p: p2pData
         };
     } catch (error) {
         console.error("Error fetching rates:", error);
