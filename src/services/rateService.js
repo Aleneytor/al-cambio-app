@@ -97,6 +97,7 @@ export const fetchAllRates = async () => {
             lastUpdate: "Hoy, " + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
             nextRates: nextBCV ? {
                 date: formatDate(nextBCV.date),
+                rawDate: nextBCV.date, // ISO format for comparison
                 usd: nextBCV.usd,
                 eur: nextBCV.eur
             } : null,

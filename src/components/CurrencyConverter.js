@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, Share } from 'react-native';
 import { ArrowLeftRight, Calendar, Copy, Check, RotateCcw, Share2 } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
+import { useToast } from '../context/ToastContext';
 import { COLORS } from '../theme/colors';
 
 const CurrencyConverter = ({ rates, initialCurrency }) => {
+    const { showToast } = useToast();
     const [foreignAmount, setForeignAmount] = useState('1,00');
     const [bsAmount, setBsAmount] = useState('');
     const [selectedCurrency, setSelectedCurrency] = useState(initialCurrency || 'usd'); // usd, eur, parallel
     const [useTomorrow, setUseTomorrow] = useState(false);
+    const [isSwapped, setIsSwapped] = useState(false);
 
     // Update selected currency if initialCurrency prop changes (e.g. from navigation)
     useEffect(() => {
@@ -118,17 +122,21 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
     const copyToClipboard = async (text, type) => {
         if (!text) return;
         await Clipboard.setStringAsync(text);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
         if (type === 'foreign') {
             setCopiedForeign(true);
+            showToast('Cantidad en divisas copiada', 'success');
             setTimeout(() => setCopiedForeign(false), 2000);
         } else {
             setCopiedBs(true);
+            showToast('Cantidad en Bolívares copiada', 'success');
             setTimeout(() => setCopiedBs(false), 2000);
         }
     };
 
     const handleReset = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setForeignAmount('1,00');
         // Trigger recalculation effectively or set manually
         const digits = '100'; // 1.00
@@ -137,22 +145,27 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
     };
 
     const handleShare = async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         try {
             const today = new Date();
             const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
 
             const dateStr = useTomorrow && hasNextRates ?
                 `${getFriendlyNextDate()} (${rates.nextRates.date.substring(0, 5)})` :
-                `Hoy (${formattedToday})`;
+                `Hoy ${formattedToday}`;
 
             const currencyName = selectedCurrency === 'parallel' ? 'USDT' : selectedCurrency.toUpperCase();
+            const currencyIcon = selectedCurrency === 'eur' ? '🇪🇺' : selectedCurrency === 'parallel' ? '🪙' : '🇺🇸';
 
-            const message = `📊 *Cambio al Día* \n\n` +
-                `💵 *${foreignAmount} ${getSymbol()}* (${currencyName})\n` +
-                `🇻🇪 *${bsAmount} Bs*\n\n` +
-                `📈 Tasa: ${formatCurrency(currentRate)} Bs\n` +
-                `📅 Fecha: ${dateStr}\n\n` +
-                `_Calculado con Al Cambio App_`;
+            const message =
+                `💱 *Kuanto*
+
+${currencyIcon} *${foreignAmount} ${currencyName}*  ➡️  🇻🇪 *${bsAmount} Bs*
+
+📊 Tasa: *${formatCurrency(currentRate)} Bs*
+📅 ${dateStr}
+
+_Enviado desde Kuanto App_ 📲`;
 
             await Share.share({
                 message: message,
@@ -173,15 +186,26 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
     };
 
     const getFriendlyNextDate = () => {
-        if (!rates.nextRates) return '';
-        const [d, m, y] = rates.nextRates.date.split('/');
-        const nextDateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
-        const today = new Date();
+        if (!rates.nextRates || !rates.nextRates.rawDate) return '';
+
+        // Get "today" in VET (UTC-4)
+        const now = new Date();
+        const vetTime = now.getTime() - (4 * 60 * 60 * 1000);
+        const today = new Date(vetTime);
         today.setHours(0, 0, 0, 0);
-        nextDateObj.setHours(0, 0, 0, 0);
-        const diffTime = nextDateObj.getTime() - today.getTime();
-        const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays === 1) return 'Mañana';
+
+        // Create "tomorrow" date in VET
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const tomorrowISO = tomorrow.toISOString().split('T')[0];
+
+        if (rates.nextRates.rawDate === tomorrowISO) {
+            return 'Mañana';
+        }
+
+        // If not tomorrow, show the day name
+        const [y, m, d] = rates.nextRates.rawDate.split('-');
+        const nextDateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
         const daysArr = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         return daysArr[nextDateObj.getDay()];
     };
@@ -233,7 +257,10 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
                                     borderColor: chipColor
                                 }
                             ]}
-                            onPress={() => setSelectedCurrency(curr)}
+                            onPress={() => {
+                                Haptics.selectionAsync();
+                                setSelectedCurrency(curr);
+                            }}
                         >
                             <Text style={[
                                 styles.chipText,
@@ -247,53 +274,117 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
             </View>
 
             <View style={styles.converterBox}>
-                {/* Foreign Input */}
-                <View style={styles.inputSection}>
-                    <View style={styles.inputWrapper}>
-                        <Text style={styles.inputLabel}>{getSymbol()}</Text>
-                        <TextInput
-                            style={styles.input}
-                            value={foreignAmount}
-                            onChangeText={handleForeignChange}
-                            keyboardType="number-pad"
-                            placeholder="0.00"
-                            placeholderTextColor={COLORS.textSecondary}
-                        />
-                    </View>
-                    <TouchableOpacity
-                        style={[styles.copyButton, copiedForeign && { backgroundColor: `${activeColor}1A` }]}
-                        onPress={() => copyToClipboard(foreignAmount, 'foreign')}
-                    >
-                        {copiedForeign ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
-                    </TouchableOpacity>
-                    <Text style={styles.currencySubLabel}>{getCurrencyLabel()}</Text>
-                </View>
+                {!isSwapped ? (
+                    <>
+                        {/* Foreign Input */}
+                        <View style={styles.inputSection}>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.inputLabel}>{getSymbol()}</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={foreignAmount}
+                                    onChangeText={handleForeignChange}
+                                    keyboardType="number-pad"
+                                    placeholder="0.00"
+                                    placeholderTextColor={COLORS.textSecondary}
+                                />
+                            </View>
+                            <TouchableOpacity
+                                style={[styles.copyButton, copiedForeign && { backgroundColor: `${activeColor}1A` }]}
+                                onPress={() => copyToClipboard(foreignAmount, 'foreign')}
+                            >
+                                {copiedForeign ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                            </TouchableOpacity>
+                            <Text style={styles.currencySubLabel}>{getCurrencyLabel()}</Text>
+                        </View>
 
-                <View style={styles.divider}>
-                    <ArrowLeftRight color={COLORS.textSecondary} size={16} />
-                </View>
+                        <View style={styles.divider}>
+                            <TouchableOpacity onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                setIsSwapped(!isSwapped);
+                            }} style={styles.swapButton}>
+                                <ArrowLeftRight color={COLORS.textPrimary} size={16} />
+                            </TouchableOpacity>
+                        </View>
 
-                {/* Bs Input */}
-                <View style={styles.inputSection}>
-                    <View style={styles.inputWrapper}>
-                        <Text style={styles.inputLabel}>Bs</Text>
-                        <TextInput
-                            style={[styles.input, { color: activeColor }]}
-                            value={bsAmount}
-                            onChangeText={handleBsChange}
-                            keyboardType="number-pad"
-                            placeholder="0.00"
-                            placeholderTextColor={COLORS.textSecondary}
-                        />
-                    </View>
-                    <TouchableOpacity
-                        style={[styles.copyButton, copiedBs && { backgroundColor: `${activeColor}1A` }]}
-                        onPress={() => copyToClipboard(bsAmount, 'bs')}
-                    >
-                        {copiedBs ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
-                    </TouchableOpacity>
-                    <Text style={styles.currencySubLabel}>BOLÍVARES</Text>
-                </View>
+                        {/* Bs Input */}
+                        <View style={styles.inputSection}>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.inputLabel}>Bs</Text>
+                                <TextInput
+                                    style={[styles.input, { color: activeColor }]}
+                                    value={bsAmount}
+                                    onChangeText={handleBsChange}
+                                    keyboardType="number-pad"
+                                    placeholder="0.00"
+                                    placeholderTextColor={COLORS.textSecondary}
+                                />
+                            </View>
+                            <TouchableOpacity
+                                style={[styles.copyButton, copiedBs && { backgroundColor: `${activeColor}1A` }]}
+                                onPress={() => copyToClipboard(bsAmount, 'bs')}
+                            >
+                                {copiedBs ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                            </TouchableOpacity>
+                            <Text style={styles.currencySubLabel}>BOLÍVARES</Text>
+                        </View>
+                    </>
+                ) : (
+                    <>
+                        {/* Bs Input (Swapped) */}
+                        <View style={styles.inputSection}>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.inputLabel}>Bs</Text>
+                                <TextInput
+                                    style={[styles.input, { color: activeColor }]}
+                                    value={bsAmount}
+                                    onChangeText={handleBsChange}
+                                    keyboardType="number-pad"
+                                    placeholder="0.00"
+                                    placeholderTextColor={COLORS.textSecondary}
+                                />
+                            </View>
+                            <TouchableOpacity
+                                style={[styles.copyButton, copiedBs && { backgroundColor: `${activeColor}1A` }]}
+                                onPress={() => copyToClipboard(bsAmount, 'bs')}
+                            >
+                                {copiedBs ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                            </TouchableOpacity>
+                            <Text style={styles.currencySubLabel}>BOLÍVARES</Text>
+                        </View>
+
+                        <View style={styles.divider}>
+                            <TouchableOpacity onPress={() => {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                                setIsSwapped(!isSwapped);
+                            }} style={styles.swapButton}>
+                                <ArrowLeftRight color={COLORS.textPrimary} size={16} />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Foreign Input (Swapped) */}
+                        <View style={styles.inputSection}>
+                            <View style={styles.inputWrapper}>
+                                <Text style={styles.inputLabel}>{getSymbol()}</Text>
+                                <TextInput
+                                    style={styles.input}
+                                    value={foreignAmount}
+                                    onChangeText={handleForeignChange}
+                                    keyboardType="number-pad"
+                                    placeholder="0.00"
+                                    placeholderTextColor={COLORS.textSecondary}
+                                />
+                            </View>
+                            <TouchableOpacity
+                                style={[styles.copyButton, copiedForeign && { backgroundColor: `${activeColor}1A` }]}
+                                onPress={() => copyToClipboard(foreignAmount, 'foreign')}
+                            >
+                                {copiedForeign ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                            </TouchableOpacity>
+                            <Text style={styles.currencySubLabel}>{getCurrencyLabel()}</Text>
+                        </View>
+                    </>
+                )}
             </View>
 
             <Text style={styles.rateInfo}>
@@ -433,6 +524,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
+    },
+    swapButton: {
+        backgroundColor: COLORS.card,
+        padding: 8,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: COLORS.glassBorder,
     },
     rateInfo: {
         color: COLORS.textSecondary,

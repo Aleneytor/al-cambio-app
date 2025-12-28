@@ -17,7 +17,7 @@ const LegalScreen = ({ navigation }) => {
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 <View style={styles.card}>
                     <Text style={styles.paragraph}>
-                        La información mostrada en esta aplicación tiene un carácter <Text style={styles.bold}>exclusivamente informativo</Text>. Al Cambio App no representa ni está afiliado a ninguna entidad gubernamental y no establece ninguna de las tasas aquí publicadas. La única tasa oficial en Venezuela es la publicada por el <Text style={styles.bold}>Banco Central de Venezuela (BCV)</Text>, disponible en su sitio web oficial.
+                        La información mostrada en esta aplicación tiene un carácter <Text style={styles.bold}>exclusivamente informativo</Text>. Kuanto no representa ni está afiliado a ninguna entidad gubernamental y no establece ninguna de las tasas aquí publicadas. La única tasa oficial en Venezuela es la publicada por el <Text style={styles.bold}>Banco Central de Venezuela (BCV)</Text>, disponible en su sitio web oficial.
                     </Text>
 
                     <TouchableOpacity onPress={() => Linking.openURL('https://www.bcv.org.ve/')} style={styles.linkButton}>

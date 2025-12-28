@@ -1,13 +1,16 @@
-import React, { useMemo } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, RefreshControl, FlatList } from 'react-native';
+import React, { useMemo, useRef } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, RefreshControl, FlatList, Animated, Platform } from 'react-native';
 import { Banknote, RefreshCcw, TrendingUp, DollarSign, History, ChevronRight, Info } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { COLORS } from '../theme/colors';
 import RateCard from '../components/RateCard';
+import SkeletonCard from '../components/SkeletonCard';
 import { useRates } from '../context/RateContext';
 import { formatCurrency } from '../utils/formatting';
 
 const HomeScreen = ({ navigation }) => {
     const { rates, loading, refreshRates, order } = useRates();
+    const scrollY = useRef(new Animated.Value(0)).current;
 
     const formatDate = (dateStr) => {
         const [y, m, d] = dateStr.split('-');
@@ -15,6 +18,7 @@ const HomeScreen = ({ navigation }) => {
     };
 
     const handleCardPress = (currencyId) => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         navigation.navigate('Calculadora', { initialCurrency: currencyId });
     };
 
@@ -28,6 +32,7 @@ const HomeScreen = ({ navigation }) => {
                 icon: <DollarSign color={COLORS.bcvGreen} size={24} />,
                 nextRate: rates.nextRates?.usd,
                 nextDate: rates.nextRates?.date,
+                nextRawDate: rates.nextRates?.rawDate,
                 change: rates.usdChange
             },
             eur: {
@@ -38,6 +43,7 @@ const HomeScreen = ({ navigation }) => {
                 icon: <Banknote color={COLORS.euroBlue} size={24} />,
                 nextRate: rates.nextRates?.eur,
                 nextDate: rates.nextRates?.date,
+                nextRawDate: rates.nextRates?.rawDate,
                 change: rates.eurChange
             },
             parallel: {
@@ -53,23 +59,42 @@ const HomeScreen = ({ navigation }) => {
         return order.map(id => dataMap[id]);
     }, [rates, order]);
 
-    const renderItem = ({ item }) => <RateCard {...item} onPress={() => handleCardPress(item.id)} />;
+    // Check if we have real data loaded
+    const hasData = rates.bcv > 0;
+
+    const renderItem = ({ item, index }) => <RateCard {...item} index={index} onPress={() => handleCardPress(item.id)} />;
+    const renderSkeleton = ({ index }) => <SkeletonCard index={index} />;
+
+    // Subtle animation for header scaling as you scroll
+    const headerScale = scrollY.interpolate({
+        inputRange: [-100, 0, 100],
+        outputRange: [1.1, 1, 0.95],
+        extrapolate: 'clamp',
+    });
 
     const Header = (
-        <View style={styles.header}>
+        <Animated.View
+            style={[
+                styles.header,
+                { transform: [{ scale: headerScale }] }
+            ]}
+        >
             <View>
                 <Text style={styles.headerTitle}>Tasas del Día</Text>
-                <Text style={styles.headerSubtitle}>Tasa Oficial y Promedio USDT</Text>
+                <Text style={styles.headerSubtitle}>{new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
                 <Text style={[styles.hintText, { marginTop: 12, textAlign: 'left', fontSize: 13 }]}>👉 Toca una tarjeta para calcular</Text>
             </View>
             <TouchableOpacity
                 style={styles.infoButton}
-                onPress={() => navigation.navigate('Legal')}
+                onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    navigation.navigate('Legal');
+                }}
                 activeOpacity={0.7}
             >
                 <Info size={24} color={COLORS.textSecondary} />
             </TouchableOpacity>
-        </View>
+        </Animated.View>
     );
 
     const Footer = (
@@ -112,16 +137,25 @@ const HomeScreen = ({ navigation }) => {
 
     return (
         <View style={styles.container}>
-            <FlatList
-                data={cardData}
+            <Animated.FlatList
+                data={hasData ? cardData : [{ id: 'sk1' }, { id: 'sk2' }, { id: 'sk3' }]}
                 keyExtractor={(item) => item.id}
-                renderItem={renderItem}
+                renderItem={hasData ? renderItem : renderSkeleton}
                 ListHeaderComponent={Header}
-                ListFooterComponent={Footer}
+                ListFooterComponent={hasData ? Footer : null}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: true }
+                )}
+                scrollEventThrottle={16}
                 refreshControl={
-                    <RefreshControl refreshing={loading} onRefresh={() => refreshRates(true)} tintColor={COLORS.bcvGreen} />
+                    <RefreshControl
+                        refreshing={loading}
+                        onRefresh={() => refreshRates(true)}
+                        tintColor={COLORS.bcvGreen}
+                    />
                 }
             />
         </View>
@@ -136,29 +170,35 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
-        paddingVertical: 20,
-        marginBottom: 8,
+        alignItems: 'flex-start',
+        paddingVertical: 24,
+        marginBottom: 12,
     },
     headerTitle: {
-        fontSize: 28,
-        fontWeight: '700',
+        fontSize: 32,
+        fontWeight: '800',
         color: COLORS.textPrimary,
+        letterSpacing: -0.5,
     },
     headerSubtitle: {
-        fontSize: 14,
+        fontSize: 15,
         color: COLORS.textSecondary,
-        marginTop: 4,
+        marginTop: 6,
+        fontWeight: '500',
     },
     refreshButton: {
-        backgroundColor: COLORS.card,
-        padding: 12,
-        borderRadius: 12,
+        backgroundColor: COLORS.glass,
+        padding: 14,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: COLORS.glassBorder,
     },
     infoButton: {
-        backgroundColor: COLORS.card,
-        padding: 12,
-        borderRadius: 12,
+        backgroundColor: COLORS.glass,
+        padding: 14,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: COLORS.glassBorder,
     },
     scrollContent: {
         paddingHorizontal: 20,

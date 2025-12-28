@@ -1,22 +1,28 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Linking, Share, Platform, Switch } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import {
-    Settings,
     Info,
     Share2,
     Database,
-    Github,
     ChevronRight,
-    ShieldCheck,
     Mail,
     Bell,
+    Star,
+    Heart,
+    FileText,
 } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { useRates } from '../context/RateContext';
 import { COLORS } from '../theme/colors';
+import { requestNotificationPermissions, scheduleDailyRateAlerts, cancelAllNotifications } from '../services/notificationService';
+import { registerBackgroundFetch, unregisterBackgroundFetch } from '../services/backgroundTaskService';
+import { useToast } from '../context/ToastContext';
 
 const SettingsScreen = ({ navigation }) => {
     const { rates } = useRates();
+    const { showToast } = useToast();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
     React.useEffect(() => {
@@ -26,80 +32,148 @@ const SettingsScreen = ({ navigation }) => {
     }, []);
 
     const toggleNotifications = async (val) => {
-        setNotificationsEnabled(val);
-        await AsyncStorage.setItem('@app_notifications', JSON.stringify(val));
+        Haptics.selectionAsync();
+
         if (val) {
-            // Here you would trigger push permission request
+            const granted = await requestNotificationPermissions();
+            if (granted) {
+                setNotificationsEnabled(true);
+                await AsyncStorage.setItem('@app_notifications', JSON.stringify(true));
+                await scheduleDailyRateAlerts();
+                await registerBackgroundFetch();
+                showToast('Alertas activadas (1 PM y 5 PM)', 'success');
+            } else {
+                showToast('Permisos de notificación denegados', 'error');
+                setNotificationsEnabled(false);
+            }
+        } else {
+            setNotificationsEnabled(false);
+            await AsyncStorage.setItem('@app_notifications', JSON.stringify(false));
+            await cancelAllNotifications();
+            await unregisterBackgroundFetch();
+            showToast('Alertas desactivadas', 'info');
         }
     };
 
     const settingsSections = [
         {
-            title: 'Información',
-            items: [
-                {
-                    id: 'sources',
-                    icon: <Database size={20} color={COLORS.bcvGreen} />,
-                    label: 'Fuentes de información',
-                    onPress: () => navigation.navigate('Sources')
-                },
-                {
-                    id: 'status',
-                    icon: <ShieldCheck size={20} color={COLORS.euroBlue} />,
-                    label: 'Estado de las APIs',
-                    value: 'Operativo'
-                },
-                {
-                    id: 'legal',
-                    icon: <Info size={20} color={COLORS.textSecondary} />,
-                    label: 'Aviso Legal',
-                    onPress: () => navigation.navigate('Legal')
-                },
-            ]
-
-        },
-        {
-            title: 'Notificaciones',
+            title: 'General',
             items: [
                 {
                     id: 'notify_daily',
                     icon: <Bell size={20} color={COLORS.parallelOrange} />,
-                    label: 'Activar Notificaciones',
+                    label: 'Notificaciones',
+                    subtitle: 'Recibe alertas de tasas',
                     type: 'switch',
                     value: notificationsEnabled,
                     onValueChange: toggleNotifications
-                }
+                },
+                {
+                    id: 'sources',
+                    icon: <Database size={20} color={COLORS.bcvGreen} />,
+                    label: 'Fuentes de datos',
+                    subtitle: 'BCV, Binance, Bybit',
+                    onPress: () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        navigation.navigate('Sources');
+                    }
+                },
+                {
+                    id: 'welcome',
+                    icon: <Info size={20} color={COLORS.textSecondary} />,
+                    label: 'Ver Bienvenida',
+                    subtitle: 'Pantalla de presentación',
+                    onPress: async () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                        await AsyncStorage.removeItem('@app_intro_shown');
+                        showToast('Abriendo bienvenida...', 'info');
+                        // No es necesario reiniciar, podemos navegar directamente
+                        navigation.navigate('Welcome');
+                    }
+                },
             ]
         },
         {
-            title: 'Aplicación',
+            title: 'Comparte',
             items: [
                 {
-                    id: 'contact',
-                    icon: <Mail size={20} color={COLORS.textPrimary} />,
-                    label: 'Contactar Soporte',
-                    onPress: () => Linking.openURL('mailto:soporte@alcambio.app')
-                },
-                {
                     id: 'share',
-                    icon: <Share2 size={20} color={COLORS.parallelOrange} />,
-                    label: 'Compartir Aplicación',
+                    icon: <Share2 size={20} color={COLORS.euroBlue} />,
+                    label: 'Compartir App',
+                    subtitle: 'Invita a tus amigos',
                     onPress: async () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                         try {
                             await Share.share({
-                                message: '¡Hola! Te recomiendo "Al Cambio App" para consultar las tasas del BCV y Paralelo al instante. 🚀',
-                                url: Platform.OS === 'ios' ? 'https://apple.co/...' : 'https://play.google.com/...'
+                                message: `💱 *Kuanto*\n\nConsulta las tasas del BCV y Paralelo al instante.\n\n📲 Descárgala gratis!`,
                             });
                         } catch (error) {
                             console.error(error);
                         }
                     }
                 },
+                {
+                    id: 'rate',
+                    icon: <Star size={20} color="#FFD700" />,
+                    label: 'Califica la App',
+                    subtitle: '¡Tu opinión importa!',
+                    onPress: () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        // TODO: Link to store
+                    }
+                },
+            ]
+        },
+        {
+            title: 'Soporte',
+            items: [
+                {
+                    id: 'contact',
+                    icon: <Mail size={20} color={COLORS.textSecondary} />,
+                    label: 'Contactar',
+                    subtitle: 'soporte@alcambio.app',
+                    onPress: () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        Linking.openURL('mailto:soporte@alcambio.app');
+                    }
+                },
+                {
+                    id: 'legal',
+                    icon: <FileText size={20} color={COLORS.textSecondary} />,
+                    label: 'Aviso Legal',
+                    subtitle: 'Términos y condiciones',
+                    onPress: () => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                        navigation.navigate('Legal');
+                    }
+                },
+                {
+                    id: 'test_notify',
+                    icon: <Bell size={20} color={COLORS.bcvGreen} />,
+                    label: 'Enviar Prueba',
+                    subtitle: 'Ver cómo llegan las alertas',
+                    onPress: async () => {
+                        const { status } = await Notifications.getPermissionsAsync();
+                        if (status !== 'granted') {
+                            showToast('Primero activa las notificaciones', 'error');
+                            return;
+                        }
+                        await Notifications.scheduleNotificationAsync({
+                            content: {
+                                title: '🔔 Prueba de Alerta',
+                                body: '¡Así es como recibirás tus reportes de tasas!',
+                                data: { screen: 'Inicio' },
+                            },
+                            trigger: null,
+                        });
+                        showToast('Prueba enviada', 'success');
+                    }
+                },
             ]
         }
     ];
 
-    const SettingItem = ({ icon, label, value, onPress, disabled, type, onValueChange }) => (
+    const SettingItem = ({ icon, label, subtitle, value, onPress, disabled, type, onValueChange }) => (
         <TouchableOpacity
             style={[styles.item, disabled && { opacity: 0.5 }]}
             onPress={type === 'switch' ? () => onValueChange(!value) : onPress}
@@ -110,7 +184,10 @@ const SettingsScreen = ({ navigation }) => {
                 <View style={styles.iconContainer}>
                     {icon}
                 </View>
-                <Text style={styles.itemLabel}>{label}</Text>
+                <View style={styles.itemTextContainer}>
+                    <Text style={styles.itemLabel}>{label}</Text>
+                    {subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
+                </View>
             </View>
             <View style={styles.itemRight}>
                 {type === 'switch' ? (
@@ -157,7 +234,7 @@ const SettingsScreen = ({ navigation }) => {
                 ))}
 
                 <View style={styles.footer}>
-                    <Text style={styles.versionText}>Al Cambio App v1.0.0</Text>
+                    <Text style={styles.versionText}>Kuanto v1.0.0</Text>
                     <Text style={styles.creatorText}>© 2025 - Tu aliado financiero</Text>
                 </View>
             </ScrollView>
@@ -172,18 +249,20 @@ const styles = StyleSheet.create({
     },
     header: {
         paddingHorizontal: 20,
-        paddingVertical: 20,
-        marginTop: 10,
+        paddingVertical: 24,
+        marginTop: 8,
     },
     headerTitle: {
-        fontSize: 28,
-        fontWeight: '700',
+        fontSize: 32,
+        fontWeight: '800',
         color: COLORS.textPrimary,
+        letterSpacing: -0.5,
     },
     headerSubtitle: {
-        fontSize: 14,
+        fontSize: 15,
         color: COLORS.textSecondary,
-        marginTop: 4,
+        marginTop: 6,
+        fontWeight: '500',
     },
     scrollContent: {
         paddingHorizontal: 20,
@@ -214,6 +293,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
     },
     itemLeft: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
     },
@@ -230,6 +310,14 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: COLORS.textPrimary,
         fontWeight: '500',
+    },
+    itemTextContainer: {
+        flex: 1,
+    },
+    itemSubtitle: {
+        fontSize: 12,
+        color: COLORS.textSecondary,
+        marginTop: 2,
     },
     itemRight: {
         flexDirection: 'row',

@@ -1,15 +1,61 @@
-import React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Share as NativeShare } from 'react-native';
+import React, { useRef, useEffect } from 'react';
+import { StyleSheet, Text, View, TouchableOpacity, Share as NativeShare, Animated } from 'react-native';
 import { Calendar, Clock, TrendingUp as Up, TrendingDown as Down, Share2 as ShareIcon } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
 import { COLORS } from '../theme/colors';
 import { formatCurrency } from '../utils/formatting';
 
-const RateCard = ({ title, rate, color, icon, nextRate, nextDate, lastUpdated, change, onPress }) => {
+const RateCard = ({ title, rate, color, icon, nextRate, nextDate, nextRawDate, lastUpdated, change, onPress, index = 0 }) => {
     const isPositive = change > 0;
 
+    // Animation values
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
+    const scaleAnim = useRef(new Animated.Value(0.95)).current;
+
+    useEffect(() => {
+        // Staggered animation based on card index
+        const delay = index * 100;
+
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 400,
+                delay,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 400,
+                delay,
+                useNativeDriver: true,
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                friction: 8,
+                tension: 40,
+                delay,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, []);
+
     const handleShare = async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         try {
-            const message = `📈 *Tasa Al Cambio*\n\n💰 ${title}: *${formatCurrency(rate)} Bs*\n📅 Fecha: ${lastUpdated || 'Hoy'}\n\nDescarga la App para más información.`;
+            const today = new Date();
+            const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+
+            const message =
+                `💱 *Kuanto*
+
+📊 *${title}*
+💰 *${formatCurrency(rate)} Bs*
+
+📅 ${formattedToday}
+
+_Enviado desde Kuanto App_ 📲`;
+
             await NativeShare.share({
                 message: message,
             });
@@ -18,52 +64,78 @@ const RateCard = ({ title, rate, color, icon, nextRate, nextDate, lastUpdated, c
         }
     };
 
+    const getNextRateLabel = () => {
+        if (!nextRawDate) return "Próxima tasa";
+
+        // Get "today" in VET (UTC-4)
+        const now = new Date();
+        const vetTime = now.getTime() - (4 * 60 * 60 * 1000);
+        const today = new Date(vetTime);
+
+        // Create "tomorrow" date
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const tomorrowISO = tomorrow.toISOString().split('T')[0];
+
+        return nextRawDate === tomorrowISO ? "Para mañana" : "Próxima tasa";
+    };
+
     return (
-        <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-            <View style={styles.cardHeader}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
-                    <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
-                        {icon}
+        <Animated.View
+            style={{
+                opacity: fadeAnim,
+                transform: [
+                    { translateY: slideAnim },
+                    { scale: scaleAnim }
+                ],
+            }}
+        >
+            <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+                <View style={styles.cardHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                        <View style={[styles.iconContainer, { backgroundColor: `${color}20` }]}>
+                            {icon}
+                        </View>
+                        <Text style={styles.cardTitle}>{title}</Text>
                     </View>
-                    <Text style={styles.cardTitle}>{title}</Text>
+                    <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
+                        <ShareIcon size={18} color={COLORS.textSecondary} />
+                    </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-                    <ShareIcon size={18} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-            </View>
 
-            <View style={styles.rateRow}>
-                <Text style={[styles.rateText, { color: color }]}>{formatCurrency(rate)} Bs</Text>
-                {change !== undefined && change !== 0 && (
-                    <View style={[styles.changeBadge, { backgroundColor: isPositive ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)' }]}>
-                        {isPositive ? <Up size={12} color="#34C759" /> : <Down size={12} color="#FF3B30" />}
-                        <Text style={[styles.changeText, { color: isPositive ? '#34C759' : '#FF3B30' }]}>
-                            {Math.abs(change).toFixed(2)}%
-                        </Text>
-                    </View>
-                )}
-            </View>
+                <View style={styles.rateRow}>
+                    <Text style={[styles.rateText, { color: color }]}>{formatCurrency(rate)} Bs</Text>
+                    {change !== undefined && change !== 0 && (
+                        <View style={[styles.changeBadge, { backgroundColor: isPositive ? 'rgba(52, 199, 89, 0.1)' : 'rgba(255, 59, 48, 0.1)' }]}>
+                            {isPositive ? <Up size={12} color="#34C759" /> : <Down size={12} color="#FF3B30" />}
+                            <Text style={[styles.changeText, { color: isPositive ? '#34C759' : '#FF3B30' }]}>
+                                {Math.abs(change).toFixed(2)}%
+                            </Text>
+                        </View>
+                    )}
+                </View>
 
-            <View style={styles.footerInfo}>
-                {nextRate && (
-                    <View style={styles.badge}>
-                        <Calendar size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
-                        <Text style={styles.badgeText}>
-                            Para mañana ({nextDate}): <Text style={{ color: COLORS.textPrimary }}>{formatCurrency(nextRate)} Bs</Text>
-                        </Text>
-                    </View>
-                )}
+                <View style={styles.footerInfo}>
+                    {nextRate && (
+                        <View style={styles.badge}>
+                            <Calendar size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
+                            <Text style={styles.badgeText}>
+                                {getNextRateLabel()} ({nextDate}): <Text style={{ color: COLORS.textPrimary }}>{formatCurrency(nextRate)} Bs</Text>
+                            </Text>
+                        </View>
+                    )}
 
-                {lastUpdated && (
-                    <View style={styles.badge}>
-                        <Clock size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
-                        <Text style={styles.badgeText}>
-                            Actualizado: <Text style={{ color: COLORS.textPrimary }}>{lastUpdated}</Text>
-                        </Text>
-                    </View>
-                )}
-            </View>
-        </TouchableOpacity>
+                    {lastUpdated && (
+                        <View style={styles.badge}>
+                            <Clock size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
+                            <Text style={styles.badgeText}>
+                                Actualizado: <Text style={{ color: COLORS.textPrimary }}>{lastUpdated}</Text>
+                            </Text>
+                        </View>
+                    )}
+                </View>
+            </TouchableOpacity>
+        </Animated.View>
     );
 };
 
