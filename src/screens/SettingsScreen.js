@@ -12,10 +12,14 @@ import {
     Star,
     Heart,
     FileText,
+    Sun,
+    Moon,
+    Smartphone,
+    Palette,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRates } from '../context/RateContext';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { requestNotificationPermissions, scheduleDailyRateAlerts, cancelAllNotifications } from '../services/notificationService';
 import { registerBackgroundFetch, unregisterBackgroundFetch } from '../services/backgroundTaskService';
 import { useToast } from '../context/ToastContext';
@@ -23,6 +27,7 @@ import { useToast } from '../context/ToastContext';
 const SettingsScreen = ({ navigation }) => {
     const { rates } = useRates();
     const { showToast } = useToast();
+    const { colors, themePreference, setTheme, isDark } = useTheme();
     const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
     React.useEffect(() => {
@@ -55,13 +60,87 @@ const SettingsScreen = ({ navigation }) => {
         }
     };
 
+    const handleThemeChange = async (newTheme) => {
+        Haptics.selectionAsync();
+        await setTheme(newTheme);
+        const labels = { light: 'Modo Claro', dark: 'Modo Oscuro', system: 'Automático' };
+        showToast(`${labels[newTheme]} activado`, 'success');
+    };
+
+    const themeOptions = [
+        { id: 'light', icon: Sun, label: 'Claro', color: '#FF9500' },
+        { id: 'dark', icon: Moon, label: 'Oscuro', color: '#5856D6' },
+        { id: 'system', icon: Smartphone, label: 'Auto', color: colors.bcvGreen },
+    ];
+
+    const ThemeSelector = () => (
+        <View style={[styles.themeSelectorContainer, { backgroundColor: colors.card }]}>
+            <View style={styles.themeSelectorHeader}>
+                <View style={[styles.iconContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }]}>
+                    <Palette size={20} color={colors.euroBlue} />
+                </View>
+                <View style={styles.themeSelectorTitleContainer}>
+                    <Text style={[styles.itemLabel, { color: colors.textPrimary }]}>Apariencia</Text>
+                    <Text style={[styles.itemSubtitle, { color: colors.textSecondary }]}>Personaliza el tema de la app</Text>
+                </View>
+            </View>
+            <View style={styles.themeOptionsRow}>
+                {themeOptions.map((option) => {
+                    const isSelected = themePreference === option.id;
+                    const IconComp = option.icon;
+                    return (
+                        <TouchableOpacity
+                            key={option.id}
+                            style={[
+                                styles.themeOption,
+                                {
+                                    backgroundColor: isSelected
+                                        ? (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)')
+                                        : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                                    borderColor: isSelected
+                                        ? option.color
+                                        : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'),
+                                }
+                            ]}
+                            onPress={() => handleThemeChange(option.id)}
+                            activeOpacity={0.7}
+                        >
+                            <View style={[
+                                styles.themeIconWrapper,
+                                { backgroundColor: isSelected ? `${option.color}20` : 'transparent' }
+                            ]}>
+                                <IconComp
+                                    size={20}
+                                    color={isSelected ? option.color : colors.textSecondary}
+                                />
+                            </View>
+                            <Text style={[
+                                styles.themeOptionLabel,
+                                {
+                                    color: isSelected ? option.color : colors.textSecondary,
+                                    fontWeight: isSelected ? '600' : '500'
+                                }
+                            ]}>
+                                {option.label}
+                            </Text>
+                        </TouchableOpacity>
+                    );
+                })}
+            </View>
+        </View>
+    );
+
     const settingsSections = [
+        {
+            title: 'Apariencia',
+            customContent: <ThemeSelector />,
+        },
         {
             title: 'General',
             items: [
                 {
                     id: 'notify_daily',
-                    icon: <Bell size={20} color={COLORS.parallelOrange} />,
+                    icon: <Bell size={20} color={colors.parallelOrange} />,
                     label: 'Notificaciones',
                     subtitle: 'Recibe alertas de tasas',
                     type: 'switch',
@@ -70,7 +149,7 @@ const SettingsScreen = ({ navigation }) => {
                 },
                 {
                     id: 'sources',
-                    icon: <Database size={20} color={COLORS.bcvGreen} />,
+                    icon: <Database size={20} color={colors.bcvGreen} />,
                     label: 'Fuentes de datos',
                     subtitle: 'BCV, Binance, Bybit',
                     onPress: () => {
@@ -80,14 +159,13 @@ const SettingsScreen = ({ navigation }) => {
                 },
                 {
                     id: 'welcome',
-                    icon: <Info size={20} color={COLORS.textSecondary} />,
+                    icon: <Info size={20} color={colors.textSecondary} />,
                     label: 'Ver Bienvenida',
                     subtitle: 'Pantalla de presentación',
                     onPress: async () => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                         await AsyncStorage.removeItem('@app_intro_shown');
                         showToast('Abriendo bienvenida...', 'info');
-                        // No es necesario reiniciar, podemos navegar directamente
                         navigation.navigate('Welcome');
                     }
                 },
@@ -98,7 +176,7 @@ const SettingsScreen = ({ navigation }) => {
             items: [
                 {
                     id: 'share',
-                    icon: <Share2 size={20} color={COLORS.euroBlue} />,
+                    icon: <Share2 size={20} color={colors.euroBlue} />,
                     label: 'Compartir App',
                     subtitle: 'Invita a tus amigos',
                     onPress: async () => {
@@ -129,7 +207,7 @@ const SettingsScreen = ({ navigation }) => {
             items: [
                 {
                     id: 'contact',
-                    icon: <Mail size={20} color={COLORS.textSecondary} />,
+                    icon: <Mail size={20} color={colors.textSecondary} />,
                     label: 'Contactar',
                     subtitle: 'soporte@alcambio.app',
                     onPress: () => {
@@ -139,7 +217,7 @@ const SettingsScreen = ({ navigation }) => {
                 },
                 {
                     id: 'legal',
-                    icon: <FileText size={20} color={COLORS.textSecondary} />,
+                    icon: <FileText size={20} color={colors.textSecondary} />,
                     label: 'Aviso Legal',
                     subtitle: 'Términos y condiciones',
                     onPress: () => {
@@ -149,7 +227,7 @@ const SettingsScreen = ({ navigation }) => {
                 },
                 {
                     id: 'test_notify',
-                    icon: <Bell size={20} color={COLORS.bcvGreen} />,
+                    icon: <Bell size={20} color={colors.bcvGreen} />,
                     label: 'Enviar Prueba',
                     subtitle: 'Ver cómo llegan las alertas',
                     onPress: async () => {
@@ -181,12 +259,12 @@ const SettingsScreen = ({ navigation }) => {
             activeOpacity={type === 'switch' ? 1 : 0.7}
         >
             <View style={styles.itemLeft}>
-                <View style={styles.iconContainer}>
+                <View style={[styles.iconContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)' }]}>
                     {icon}
                 </View>
                 <View style={styles.itemTextContainer}>
-                    <Text style={styles.itemLabel}>{label}</Text>
-                    {subtitle && <Text style={styles.itemSubtitle}>{subtitle}</Text>}
+                    <Text style={[styles.itemLabel, { color: colors.textPrimary }]}>{label}</Text>
+                    {subtitle && <Text style={[styles.itemSubtitle, { color: colors.textSecondary }]}>{subtitle}</Text>}
                 </View>
             </View>
             <View style={styles.itemRight}>
@@ -194,38 +272,40 @@ const SettingsScreen = ({ navigation }) => {
                     <Switch
                         value={value}
                         onValueChange={onValueChange}
-                        trackColor={{ false: '#767577', true: 'rgba(52, 199, 89, 0.3)' }}
-                        thumbColor={value ? COLORS.bcvGreen : '#f4f3f4'}
-                        ios_backgroundColor="#3e3e3e"
+                        trackColor={{ false: isDark ? '#767577' : '#D1D1D6', true: 'rgba(52, 199, 89, 0.3)' }}
+                        thumbColor={value ? colors.bcvGreen : (isDark ? '#f4f3f4' : '#FFFFFF')}
+                        ios_backgroundColor={isDark ? '#3e3e3e' : '#E9E9EB'}
                     />
                 ) : value ? (
-                    <Text style={styles.itemValue}>{value}</Text>
+                    <Text style={[styles.itemValue, { color: colors.textSecondary }]}>{value}</Text>
                 ) : (
-                    onPress && <ChevronRight size={18} color={COLORS.textSecondary} />
+                    onPress && <ChevronRight size={18} color={colors.textSecondary} />
                 )}
             </View>
         </TouchableOpacity>
     );
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Ajustes</Text>
-                <Text style={styles.headerSubtitle}>Configuración y transparencia</Text>
+                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Ajustes</Text>
+                <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Configuración y transparencia</Text>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
                 {settingsSections.map((section, idx) => (
                     <View key={idx} style={styles.section}>
-                        <Text style={styles.sectionTitle}>{section.title}</Text>
+                        <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{section.title}</Text>
                         {section.customContent ? (
                             section.customContent
                         ) : (
-                            <View style={styles.sectionCard}>
+                            <View style={[styles.sectionCard, { backgroundColor: colors.card }]}>
                                 {section.items.map((item, itemIdx) => (
                                     <View key={item.id}>
                                         <SettingItem {...item} />
-                                        {itemIdx < section.items.length - 1 && <View style={styles.divider} />}
+                                        {itemIdx < section.items.length - 1 && (
+                                            <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+                                        )}
                                     </View>
                                 ))}
                             </View>
@@ -234,8 +314,10 @@ const SettingsScreen = ({ navigation }) => {
                 ))}
 
                 <View style={styles.footer}>
-                    <Text style={styles.versionText}>Kuanto v1.0.0</Text>
-                    <Text style={styles.creatorText}>© 2025 - Tu aliado financiero</Text>
+                    <Text style={[styles.versionText, { color: colors.textSecondary }]}>Kuanto v1.0.0</Text>
+                    <Text style={[styles.creatorText, { color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }]}>
+                        © 2025 - Tu aliado financiero
+                    </Text>
                 </View>
             </ScrollView>
         </View>
@@ -245,7 +327,6 @@ const SettingsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
     },
     header: {
         paddingHorizontal: 20,
@@ -255,12 +336,10 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 32,
         fontWeight: '800',
-        color: COLORS.textPrimary,
         letterSpacing: -0.5,
     },
     headerSubtitle: {
         fontSize: 15,
-        color: COLORS.textSecondary,
         marginTop: 6,
         fontWeight: '500',
     },
@@ -274,14 +353,12 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 13,
         fontWeight: '700',
-        color: COLORS.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 1,
         marginBottom: 12,
         marginLeft: 4,
     },
     sectionCard: {
-        backgroundColor: COLORS.card,
         borderRadius: 20,
         overflow: 'hidden',
     },
@@ -301,14 +378,12 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 10,
-        backgroundColor: 'rgba(255,255,255,0.03)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
     },
     itemLabel: {
         fontSize: 16,
-        color: COLORS.textPrimary,
         fontWeight: '500',
     },
     itemTextContainer: {
@@ -316,7 +391,6 @@ const styles = StyleSheet.create({
     },
     itemSubtitle: {
         fontSize: 12,
-        color: COLORS.textSecondary,
         marginTop: 2,
     },
     itemRight: {
@@ -325,12 +399,10 @@ const styles = StyleSheet.create({
     },
     itemValue: {
         fontSize: 14,
-        color: COLORS.textSecondary,
         fontWeight: '500',
     },
     divider: {
         height: 1,
-        backgroundColor: 'rgba(255,255,255,0.05)',
         marginLeft: 64,
     },
     footer: {
@@ -338,14 +410,50 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     versionText: {
-        color: COLORS.textSecondary,
         fontSize: 12,
         fontWeight: '600',
     },
     creatorText: {
-        color: 'rgba(255,255,255,0.3)',
         fontSize: 10,
         marginTop: 4,
+    },
+    // Theme Selector Styles
+    themeSelectorContainer: {
+        borderRadius: 20,
+        overflow: 'hidden',
+        padding: 16,
+    },
+    themeSelectorHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    themeSelectorTitleContainer: {
+        flex: 1,
+    },
+    themeOptionsRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        gap: 10,
+    },
+    themeOption: {
+        flex: 1,
+        paddingVertical: 14,
+        paddingHorizontal: 12,
+        borderRadius: 14,
+        alignItems: 'center',
+        borderWidth: 1.5,
+    },
+    themeIconWrapper: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    themeOptionLabel: {
+        fontSize: 13,
     },
 });
 

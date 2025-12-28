@@ -9,10 +9,10 @@ import {
     Activity
 } from 'lucide-react-native';
 import { useRates } from '../context/RateContext';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { formatCurrency } from '../utils/formatting';
 
-const LiveIndicator = () => {
+const LiveIndicator = ({ colors }) => {
     const pulseAnim = useRef(new Animated.Value(0.4)).current;
 
     useEffect(() => {
@@ -34,14 +34,15 @@ const LiveIndicator = () => {
 
     return (
         <View style={styles.liveContainer}>
-            <Animated.View style={[styles.liveDot, { opacity: pulseAnim }]} />
-            <Text style={styles.liveText}>EN VIVO</Text>
+            <Animated.View style={[styles.liveDot, { opacity: pulseAnim, backgroundColor: colors.bcvGreen }]} />
+            <Text style={[styles.liveText, { color: colors.bcvGreen }]}>EN VIVO</Text>
         </View>
     );
 };
 
 const SourcesScreen = ({ navigation }) => {
     const { rates } = useRates();
+    const { colors, isDark } = useTheme();
 
     const renderSource = (title, logo, label1, val1, label2, val2, link, isLive, lastUpdate, tintColor = null) => (
         <View style={styles.p2pSource}>
@@ -54,46 +55,59 @@ const SourcesScreen = ({ navigation }) => {
                     />
                 </View>
                 <View>
-                    <Text style={styles.sourceLabel}>{title}</Text>
-                    {isLive ? <LiveIndicator /> : <Text style={styles.updateTime}>{lastUpdate || 'Actualizado hace poco'}</Text>}
+                    <Text style={[styles.sourceLabel, { color: colors.textPrimary }]}>{title}</Text>
+                    {isLive ? <LiveIndicator colors={colors} /> : <Text style={[styles.updateTime, { color: colors.textSecondary }]}>{lastUpdate || 'Actualizado hace poco'}</Text>}
                 </View>
                 {link && (
                     <TouchableOpacity onPress={() => Linking.openURL(link)} style={{ marginLeft: 'auto' }}>
-                        <ExternalLink size={18} color={COLORS.textSecondary} />
+                        <ExternalLink size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
                 )}
             </View>
-            <View style={[styles.p2pValues, isLive && styles.liveBackground]}>
+            <View style={[
+                styles.p2pValues,
+                {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'
+                },
+                isLive && {
+                    backgroundColor: 'rgba(52, 199, 89, 0.03)',
+                    borderColor: 'rgba(52, 199, 89, 0.1)',
+                }
+            ]}>
                 <View style={styles.p2pValueItem}>
-                    <Text style={styles.p2pLabel}>{label1}:</Text>
-                    <Text style={styles.p2pValue}>{val1 || '--'}</Text>
+                    <Text style={[styles.p2pLabel, { color: colors.textSecondary }]}>{label1}:</Text>
+                    <Text style={[styles.p2pValue, { color: colors.textPrimary }]}>{val1 || '--'}</Text>
                 </View>
-                <View style={styles.p2pDivider} />
+                <View style={[styles.p2pDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]} />
                 <View style={styles.p2pValueItem}>
-                    <Text style={styles.p2pLabel}>{label2}:</Text>
-                    <Text style={styles.p2pValue}>{val2 || '--'}</Text>
+                    <Text style={[styles.p2pLabel, { color: colors.textSecondary }]}>{label2}:</Text>
+                    <Text style={[styles.p2pValue, { color: colors.textPrimary }]}>{val2 || '--'}</Text>
                 </View>
             </View>
         </View>
     );
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
                 <TouchableOpacity
                     onPress={() => navigation.goBack()}
-                    style={styles.backButton}
+                    style={[styles.backButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}
                 >
-                    <ArrowLeft size={24} color={COLORS.textPrimary} />
+                    <ArrowLeft size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <View>
-                    <Text style={styles.headerTitle}>Fuentes de Datos</Text>
-                    <Text style={styles.headerSubtitle}>Transparencia y precisión</Text>
+                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Fuentes de Datos</Text>
+                    <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Transparencia y precisión</Text>
                 </View>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                <View style={styles.sourcesCard}>
+                <View style={[styles.sourcesCard, {
+                    backgroundColor: colors.card,
+                    borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+                }]}>
                     {renderSource(
                         'BCV (Oficial)',
                         require('../../assets/bcv-logo.png'),
@@ -103,11 +117,11 @@ const SourcesScreen = ({ navigation }) => {
                         rates.euro ? `Bs. ${formatCurrency(rates.euro)}` : null,
                         'https://www.bcv.org.ve/',
                         false,
-                        rates.lastUpdate, // Pass general last update 
-                        '#fff'
+                        rates.lastUpdate,
+                        isDark ? '#fff' : '#1C1C1E'
                     )}
 
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
                     {renderSource(
                         'Binance P2P',
@@ -118,10 +132,10 @@ const SourcesScreen = ({ navigation }) => {
                         rates.p2p?.binance?.buy ? `Bs. ${formatCurrency(rates.p2p.binance.buy)}` : null,
                         null,
                         true,
-                        null // Live sources handle their own indicator
+                        null
                     )}
 
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
                     {renderSource(
                         'Bybit P2P',
@@ -135,7 +149,7 @@ const SourcesScreen = ({ navigation }) => {
                         null
                     )}
 
-                    <View style={styles.divider} />
+                    <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
                     {renderSource(
                         'Yadio',
@@ -151,8 +165,8 @@ const SourcesScreen = ({ navigation }) => {
                 </View>
 
                 <View style={[styles.noteContainer, { marginTop: 32 }]}>
-                    <Activity size={20} color={COLORS.bcvGreen} style={{ alignSelf: 'center', marginBottom: 12 }} />
-                    <Text style={styles.noteText}>
+                    <Activity size={20} color={colors.bcvGreen} style={{ alignSelf: 'center', marginBottom: 12 }} />
+                    <Text style={[styles.noteText, { color: colors.textSecondary }]}>
                         Nuestra plataforma agrega datos de fuentes oficiales y los mercados P2P más líquidos para ofrecerte el promedio más estable y confiable de Venezuela.
                     </Text>
                 </View>
@@ -164,7 +178,6 @@ const SourcesScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
     },
     header: {
         flexDirection: 'row',
@@ -177,7 +190,6 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.05)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
@@ -185,11 +197,9 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: '700',
-        color: COLORS.textPrimary,
     },
     headerSubtitle: {
         fontSize: 14,
-        color: COLORS.textSecondary,
         marginTop: 2,
     },
     scrollContent: {
@@ -197,11 +207,9 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     sourcesCard: {
-        backgroundColor: COLORS.card,
         borderRadius: 28,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
     },
     p2pSource: {
         paddingVertical: 12,
@@ -224,13 +232,11 @@ const styles = StyleSheet.create({
     },
     sourceLabel: {
         fontSize: 17,
-        color: COLORS.textPrimary,
         fontWeight: '700',
         letterSpacing: -0.3,
     },
     updateTime: {
         fontSize: 12,
-        color: COLORS.textSecondary,
         fontWeight: '500',
         marginTop: 2,
     },
@@ -244,26 +250,18 @@ const styles = StyleSheet.create({
         width: 8,
         height: 8,
         borderRadius: 4,
-        backgroundColor: COLORS.bcvGreen,
     },
     liveText: {
         fontSize: 10,
         fontWeight: '800',
-        color: COLORS.bcvGreen,
         letterSpacing: 0.5,
     },
     p2pValues: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.05)',
-    },
-    liveBackground: {
-        backgroundColor: 'rgba(52, 199, 89, 0.03)',
-        borderColor: 'rgba(52, 199, 89, 0.1)',
     },
     p2pValueItem: {
         flex: 1,
@@ -271,7 +269,6 @@ const styles = StyleSheet.create({
     },
     p2pLabel: {
         fontSize: 10,
-        color: COLORS.textSecondary,
         textTransform: 'uppercase',
         letterSpacing: 1,
         marginBottom: 6,
@@ -279,17 +276,14 @@ const styles = StyleSheet.create({
     },
     p2pValue: {
         fontSize: 17,
-        color: COLORS.textPrimary,
         fontWeight: '800',
     },
     p2pDivider: {
         width: 1,
         height: 28,
-        backgroundColor: 'rgba(255,255,255,0.08)',
     },
     divider: {
         height: 1,
-        backgroundColor: 'rgba(255,255,255,0.05)',
         marginVertical: 12,
     },
     noteContainer: {
@@ -298,7 +292,6 @@ const styles = StyleSheet.create({
     },
     noteText: {
         fontSize: 13,
-        color: COLORS.textSecondary,
         lineHeight: 20,
         textAlign: 'center',
         opacity: 0.8,

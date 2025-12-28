@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavigationContainer, DarkTheme } from '@react-navigation/native';
+import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Platform, SafeAreaView, StatusBar as RNStatusBar, LogBox } from 'react-native';
@@ -12,7 +12,6 @@ import * as Notifications from 'expo-notifications';
 import { Home, Calculator, Settings } from 'lucide-react-native';
 
 // Screens
-// Screens
 import HomeScreen from './src/screens/HomeScreen';
 import ConverterScreen from './src/screens/ConverterScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
@@ -21,12 +20,10 @@ import HistoryScreen from './src/screens/HistoryScreen';
 import LegalScreen from './src/screens/LegalScreen';
 import WelcomeScreen from './src/screens/WelcomeScreen';
 
-// Theme
-import { COLORS } from './src/theme/colors';
-
 // Context
 import { RateProvider } from './src/context/RateContext';
 import { ToastProvider } from './src/context/ToastContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { requestNotificationPermissions, scheduleDailyRateAlerts } from './src/services/notificationService';
 import { defineRateCheckTask, registerBackgroundFetch } from './src/services/backgroundTaskService';
 
@@ -37,12 +34,13 @@ const Tab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function SettingsStack() {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
-        contentStyle: { backgroundColor: '#1c1c1e' }
+        contentStyle: { backgroundColor: colors.background }
       }}
     >
       <Stack.Screen name="SettingsMain" component={SettingsScreen} />
@@ -52,29 +50,31 @@ function SettingsStack() {
 }
 
 function MainTabs() {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => {
         // Dynamic colors per tab
-        let activeColor = COLORS.bcvGreen;
-        let glowColor = COLORS.glowGreen;
+        let activeColor = colors.bcvGreen;
+        let glowColor = colors.glowGreen;
         let IconComponent = Home;
 
         if (route.name === 'Calculadora') {
-          activeColor = COLORS.euroBlue;
-          glowColor = COLORS.glowBlue;
+          activeColor = colors.euroBlue;
+          glowColor = colors.glowBlue;
           IconComponent = Calculator;
         }
         if (route.name === 'Ajustes') {
-          activeColor = COLORS.parallelOrange;
-          glowColor = COLORS.glowOrange;
+          activeColor = colors.parallelOrange;
+          glowColor = colors.glowOrange;
           IconComponent = Settings;
         }
 
         return {
           // Alineación exacta de colores y etiquetas
           tabBarActiveTintColor: activeColor,
-          tabBarInactiveTintColor: COLORS.textSecondary,
+          tabBarInactiveTintColor: colors.textSecondary,
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: '700',
@@ -83,13 +83,12 @@ function MainTabs() {
             padding: 0,
           },
 
-          // Cápsula de fondo (Indicador) - Ahora se ajusta al ancho real de la pestaña
+          // Cápsula de fondo (Indicador)
           tabBarIndicatorStyle: {
             backgroundColor: glowColor,
             height: 46,
             borderRadius: 16,
             bottom: 7,
-            // Quitamos el width fijo y los márgenes manuales que causaban el desfase
           },
 
           tabBarStyle: {
@@ -132,13 +131,13 @@ function MainTabs() {
   );
 }
 
-export default function App() {
+function AppContent() {
+  const { colors, isDark, isLoading: themeLoading } = useTheme();
   const [isFirstLaunch, setIsFirstLaunch] = React.useState(null);
 
   React.useEffect(() => {
     // Handle notification clicks
     const subscription = Notifications.addNotificationResponseReceivedListener(response => {
-      // You can navigate if needed
       console.log("Notification tapped:", response);
     });
 
@@ -173,37 +172,52 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
-  if (isFirstLaunch === null) {
-    return null; // Or a loading spinner
+  if (isFirstLaunch === null || themeLoading) {
+    return null; // Loading state
   }
 
+  const navigationTheme = isDark ? {
+    ...DarkTheme,
+    colors: {
+      ...DarkTheme.colors,
+      background: colors.background,
+      card: colors.card,
+    }
+  } : {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      background: colors.background,
+      card: colors.card,
+    }
+  };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#1c1c1e', paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0 }}>
-      <StatusBar style="light" backgroundColor="#1c1c1e" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight : 0 }}>
+      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
+      <NavigationContainer theme={navigationTheme}>
+        <Stack.Navigator
+          initialRouteName={isFirstLaunch ? "Welcome" : "MainTabs"}
+          screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}
+        >
+          <Stack.Screen name="Welcome" component={WelcomeScreen} />
+          <Stack.Screen name="MainTabs" component={MainTabs} />
+          <Stack.Screen name="HistoryChart" component={HistoryScreen} options={{ animation: 'slide_from_bottom' }} />
+          <Stack.Screen name="Legal" component={LegalScreen} options={{ animation: 'slide_from_bottom' }} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
       <ToastProvider>
         <RateProvider>
-          <NavigationContainer
-            theme={{
-              ...DarkTheme,
-              colors: {
-                ...DarkTheme.colors,
-                background: '#1c1c1e',
-                card: '#2c2c2e',
-              }
-            }}
-          >
-            <Stack.Navigator
-              initialRouteName={isFirstLaunch ? "Welcome" : "MainTabs"}
-              screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#1c1c1e' } }}
-            >
-              <Stack.Screen name="Welcome" component={WelcomeScreen} />
-              <Stack.Screen name="MainTabs" component={MainTabs} />
-              <Stack.Screen name="HistoryChart" component={HistoryScreen} options={{ animation: 'slide_from_bottom' }} />
-              <Stack.Screen name="Legal" component={LegalScreen} options={{ animation: 'slide_from_bottom' }} />
-            </Stack.Navigator>
-          </NavigationContainer>
+          <AppContent />
         </RateProvider>
       </ToastProvider>
-    </SafeAreaView>
+    </ThemeProvider>
   );
 }

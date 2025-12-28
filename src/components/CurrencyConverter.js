@@ -4,17 +4,17 @@ import { ArrowLeftRight, Calendar, Copy, Check, RotateCcw, Share2 } from 'lucide
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useToast } from '../context/ToastContext';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const CurrencyConverter = ({ rates, initialCurrency }) => {
     const { showToast } = useToast();
+    const { colors, isDark } = useTheme();
     const [foreignAmount, setForeignAmount] = useState('1,00');
     const [bsAmount, setBsAmount] = useState('');
-    const [selectedCurrency, setSelectedCurrency] = useState(initialCurrency || 'usd'); // usd, eur, parallel
+    const [selectedCurrency, setSelectedCurrency] = useState(initialCurrency || 'usd');
     const [useTomorrow, setUseTomorrow] = useState(false);
     const [isSwapped, setIsSwapped] = useState(false);
 
-    // Update selected currency if initialCurrency prop changes (e.g. from navigation)
     useEffect(() => {
         if (initialCurrency) {
             setSelectedCurrency(initialCurrency);
@@ -23,22 +23,19 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
 
     const getActiveColor = () => {
         switch (selectedCurrency) {
-            case 'eur': return COLORS.euroBlue;
-            case 'parallel': return COLORS.parallelOrange;
-            default: return COLORS.bcvGreen;
+            case 'eur': return colors.euroBlue;
+            case 'parallel': return colors.parallelOrange;
+            default: return colors.bcvGreen;
         }
     };
 
     const activeColor = getActiveColor();
 
-    // States for "copied" feedback
     const [copiedForeign, setCopiedForeign] = useState(false);
     const [copiedBs, setCopiedBs] = useState(false);
 
-    // Helper functions for formatting
     const parseCurrency = (value) => {
         if (!value) return 0;
-        // Clean string: keep only numbers
         const digits = value.replace(/\D/g, '');
         const parsed = parseFloat(digits) / 100;
         return isNaN(parsed) ? 0 : parsed;
@@ -46,14 +43,9 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
 
     const formatCurrency = (value) => {
         if (value === 0 || isNaN(value)) return '';
-
         let num = parseFloat(value);
-        // Ensure 2 decimals
         let [integer, decimal] = num.toFixed(2).split('.');
-
-        // Add thousands separators
         integer = integer.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-
         return `${integer},${decimal}`;
     };
 
@@ -69,47 +61,35 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
     const currentRate = getCurrentRate();
 
     const handleForeignChange = (val) => {
-        // Strip everything but numbers
         const digits = val.replace(/\D/g, '');
-
         if (digits === '' || parseInt(digits) === 0) {
             setForeignAmount('');
             setBsAmount('');
             return;
         }
-
-        const rawValue = parseFloat(digits) / 100; // 123 -> 1.23
+        const rawValue = parseFloat(digits) / 100;
         setForeignAmount(formatCurrency(rawValue));
-
         if (rawValue > 0) {
             setBsAmount(formatCurrency(rawValue * currentRate));
         }
     };
 
     const handleBsChange = (val) => {
-        // Strip everything but numbers
         const digits = val.replace(/\D/g, '');
-
         if (digits === '' || parseInt(digits) === 0) {
             setBsAmount('');
             setForeignAmount('');
             return;
         }
-
         const rawValue = parseFloat(digits) / 100;
         setBsAmount(formatCurrency(rawValue));
-
         if (rawValue > 0) {
             setForeignAmount(formatCurrency(rawValue / currentRate));
         }
     };
 
     useEffect(() => {
-        // Recalculate based on current foreign amount text
         if (!foreignAmount) return;
-
-        // Check if we need to parse it as raw input or if it's already formatted
-        // Actually, foreignAmount is always formatted or empty in this new logic.
         const digits = foreignAmount.replace(/\D/g, '');
         if (digits) {
             const rawValue = parseFloat(digits) / 100;
@@ -123,7 +103,6 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
         if (!text) return;
         await Clipboard.setStringAsync(text);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-
         if (type === 'foreign') {
             setCopiedForeign(true);
             showToast('Cantidad en divisas copiada', 'success');
@@ -138,8 +117,6 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
     const handleReset = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         setForeignAmount('1,00');
-        // Trigger recalculation effectively or set manually
-        const digits = '100'; // 1.00
         const rawValue = 1.00;
         setBsAmount(formatCurrency(rawValue * currentRate));
     };
@@ -149,14 +126,11 @@ const CurrencyConverter = ({ rates, initialCurrency }) => {
         try {
             const today = new Date();
             const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-
             const dateStr = useTomorrow && hasNextRates ?
                 `${getFriendlyNextDate()} (${rates.nextRates.date.substring(0, 5)})` :
                 `Hoy ${formattedToday}`;
-
             const currencyName = selectedCurrency === 'parallel' ? 'USDT' : selectedCurrency.toUpperCase();
             const currencyIcon = selectedCurrency === 'eur' ? '🇪🇺' : selectedCurrency === 'parallel' ? '🪙' : '🇺🇸';
-
             const message =
                 `💱 *Kuanto*
 
@@ -166,10 +140,7 @@ ${currencyIcon} *${foreignAmount} ${currencyName}*  ➡️  🇻🇪 *${bsAmount
 📅 ${dateStr}
 
 _Enviado desde Kuanto App_ 📲`;
-
-            await Share.share({
-                message: message,
-            });
+            await Share.share({ message: message });
         } catch (error) {
             console.error(error);
         }
@@ -187,23 +158,16 @@ _Enviado desde Kuanto App_ 📲`;
 
     const getFriendlyNextDate = () => {
         if (!rates.nextRates || !rates.nextRates.rawDate) return '';
-
-        // Get "today" in VET (UTC-4)
         const now = new Date();
         const vetTime = now.getTime() - (4 * 60 * 60 * 1000);
         const today = new Date(vetTime);
         today.setHours(0, 0, 0, 0);
-
-        // Create "tomorrow" date in VET
         const tomorrow = new Date(today);
         tomorrow.setDate(today.getDate() + 1);
         const tomorrowISO = tomorrow.toISOString().split('T')[0];
-
         if (rates.nextRates.rawDate === tomorrowISO) {
             return 'Mañana';
         }
-
-        // If not tomorrow, show the day name
         const [y, m, d] = rates.nextRates.rawDate.split('-');
         const nextDateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
         const daysArr = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -211,6 +175,167 @@ _Enviado desde Kuanto App_ 📲`;
     };
 
     const hasNextRates = rates.nextRates && (selectedCurrency === 'usd' || selectedCurrency === 'eur');
+
+    // Dynamic styles based on theme
+    const styles = StyleSheet.create({
+        container: {
+            backgroundColor: colors.card,
+            borderRadius: 24,
+            padding: 20,
+            marginBottom: 20,
+            elevation: 8,
+            shadowColor: isDark ? "#000" : "#888",
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: isDark ? 0.3 : 0.15,
+            shadowRadius: 8,
+        },
+        headerRow: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 16,
+        },
+        title: {
+            color: colors.textPrimary,
+            fontSize: 18,
+            fontWeight: '700',
+        },
+        tomorrowToggle: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 12,
+            paddingVertical: 8,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: 'transparent',
+        },
+        tomorrowToggleSubtitle: {
+            color: colors.textSecondary,
+            fontSize: 9,
+            fontWeight: '700',
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+            marginBottom: -2,
+        },
+        tomorrowToggleText: {
+            color: colors.textSecondary,
+            fontSize: 12,
+            fontWeight: '700',
+        },
+        selectorContainer: {
+            flexDirection: 'row',
+            marginBottom: 24,
+            gap: 8,
+        },
+        chip: {
+            flex: 1,
+            paddingVertical: 10,
+            borderRadius: 14,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: 'transparent',
+        },
+        chipText: {
+            color: colors.textSecondary,
+            fontSize: 12,
+            fontWeight: '600',
+            textAlign: 'center',
+        },
+        converterBox: {
+            backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.04)',
+            borderRadius: 20,
+            padding: 16,
+        },
+        inputSection: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: 8,
+        },
+        inputWrapper: {
+            flex: 1,
+            flexDirection: 'row',
+            alignItems: 'center',
+        },
+        inputLabel: {
+            color: colors.textSecondary,
+            fontSize: 20,
+            fontWeight: '600',
+            width: 35,
+        },
+        input: {
+            flex: 1,
+            color: colors.textPrimary,
+            fontSize: 26,
+            fontWeight: '800',
+            padding: 0,
+        },
+        copyButton: {
+            padding: 10,
+            borderRadius: 10,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+            marginHorizontal: 8,
+        },
+        currencySubLabel: {
+            color: colors.textSecondary,
+            fontSize: 10,
+            fontWeight: '700',
+            letterSpacing: 1,
+            width: 50,
+            textAlign: 'right',
+        },
+        divider: {
+            height: 1,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)',
+            marginVertical: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+        },
+        swapButton: {
+            backgroundColor: colors.card,
+            padding: 8,
+            borderRadius: 20,
+            borderWidth: 1,
+            borderColor: colors.glassBorder,
+        },
+        rateInfo: {
+            color: colors.textSecondary,
+            fontSize: 12,
+            marginTop: 16,
+            textAlign: 'center',
+            marginBottom: 4,
+        },
+        actionRow: {
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: 20,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+            borderRadius: 16,
+            padding: 4,
+            alignSelf: 'center',
+            gap: 4
+        },
+        actionButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            gap: 8,
+            borderRadius: 12,
+        },
+        actionDivider: {
+            width: 1,
+            height: 20,
+            backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+        },
+        actionButtonText: {
+            color: colors.textSecondary,
+            fontSize: 14,
+            fontWeight: '600',
+        }
+    });
 
     return (
         <View style={styles.container}>
@@ -220,13 +345,13 @@ _Enviado desde Kuanto App_ 📲`;
                 {hasNextRates && (
                     <TouchableOpacity
                         style={[styles.tomorrowToggle, useTomorrow && {
-                            backgroundColor: `${activeColor}15`, // 10% opacity
-                            borderColor: `${activeColor}40` // 25% opacity
+                            backgroundColor: `${activeColor}15`,
+                            borderColor: `${activeColor}40`
                         }]}
                         onPress={() => setUseTomorrow(!useTomorrow)}
                         activeOpacity={0.7}
                     >
-                        <Calendar size={14} color={useTomorrow ? activeColor : COLORS.textSecondary} />
+                        <Calendar size={14} color={useTomorrow ? activeColor : colors.textSecondary} />
                         <View style={{ marginLeft: 8 }}>
                             <Text style={[styles.tomorrowToggleSubtitle, useTomorrow && { color: activeColor }]}>
                                 {useTomorrow ? 'Usando' : 'Ver'}
@@ -243,9 +368,9 @@ _Enviado desde Kuanto App_ 📲`;
             <View style={styles.selectorContainer}>
                 {['usd', 'eur', 'parallel'].map((curr) => {
                     const isSelected = selectedCurrency === curr;
-                    let chipColor = COLORS.bcvGreen;
-                    if (curr === 'eur') chipColor = COLORS.euroBlue;
-                    if (curr === 'parallel') chipColor = COLORS.parallelOrange;
+                    let chipColor = colors.bcvGreen;
+                    if (curr === 'eur') chipColor = colors.euroBlue;
+                    if (curr === 'parallel') chipColor = colors.parallelOrange;
 
                     return (
                         <TouchableOpacity
@@ -253,7 +378,7 @@ _Enviado desde Kuanto App_ 📲`;
                             style={[
                                 styles.chip,
                                 isSelected && {
-                                    backgroundColor: `${chipColor}26`, // 15% opacity
+                                    backgroundColor: `${chipColor}26`,
                                     borderColor: chipColor
                                 }
                             ]}
@@ -286,14 +411,14 @@ _Enviado desde Kuanto App_ 📲`;
                                     onChangeText={handleForeignChange}
                                     keyboardType="number-pad"
                                     placeholder="0.00"
-                                    placeholderTextColor={COLORS.textSecondary}
+                                    placeholderTextColor={colors.textSecondary}
                                 />
                             </View>
                             <TouchableOpacity
                                 style={[styles.copyButton, copiedForeign && { backgroundColor: `${activeColor}1A` }]}
                                 onPress={() => copyToClipboard(foreignAmount, 'foreign')}
                             >
-                                {copiedForeign ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                                {copiedForeign ? <Check size={16} color={activeColor} /> : <Copy size={16} color={colors.textSecondary} />}
                             </TouchableOpacity>
                             <Text style={styles.currencySubLabel}>{getCurrencyLabel()}</Text>
                         </View>
@@ -303,7 +428,7 @@ _Enviado desde Kuanto App_ 📲`;
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 setIsSwapped(!isSwapped);
                             }} style={styles.swapButton}>
-                                <ArrowLeftRight color={COLORS.textPrimary} size={16} />
+                                <ArrowLeftRight color={colors.textPrimary} size={16} />
                             </TouchableOpacity>
                         </View>
 
@@ -317,14 +442,14 @@ _Enviado desde Kuanto App_ 📲`;
                                     onChangeText={handleBsChange}
                                     keyboardType="number-pad"
                                     placeholder="0.00"
-                                    placeholderTextColor={COLORS.textSecondary}
+                                    placeholderTextColor={colors.textSecondary}
                                 />
                             </View>
                             <TouchableOpacity
                                 style={[styles.copyButton, copiedBs && { backgroundColor: `${activeColor}1A` }]}
                                 onPress={() => copyToClipboard(bsAmount, 'bs')}
                             >
-                                {copiedBs ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                                {copiedBs ? <Check size={16} color={activeColor} /> : <Copy size={16} color={colors.textSecondary} />}
                             </TouchableOpacity>
                             <Text style={styles.currencySubLabel}>BOLÍVARES</Text>
                         </View>
@@ -341,14 +466,14 @@ _Enviado desde Kuanto App_ 📲`;
                                     onChangeText={handleBsChange}
                                     keyboardType="number-pad"
                                     placeholder="0.00"
-                                    placeholderTextColor={COLORS.textSecondary}
+                                    placeholderTextColor={colors.textSecondary}
                                 />
                             </View>
                             <TouchableOpacity
                                 style={[styles.copyButton, copiedBs && { backgroundColor: `${activeColor}1A` }]}
                                 onPress={() => copyToClipboard(bsAmount, 'bs')}
                             >
-                                {copiedBs ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                                {copiedBs ? <Check size={16} color={activeColor} /> : <Copy size={16} color={colors.textSecondary} />}
                             </TouchableOpacity>
                             <Text style={styles.currencySubLabel}>BOLÍVARES</Text>
                         </View>
@@ -358,7 +483,7 @@ _Enviado desde Kuanto App_ 📲`;
                                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 setIsSwapped(!isSwapped);
                             }} style={styles.swapButton}>
-                                <ArrowLeftRight color={COLORS.textPrimary} size={16} />
+                                <ArrowLeftRight color={colors.textPrimary} size={16} />
                             </TouchableOpacity>
                         </View>
 
@@ -372,14 +497,14 @@ _Enviado desde Kuanto App_ 📲`;
                                     onChangeText={handleForeignChange}
                                     keyboardType="number-pad"
                                     placeholder="0.00"
-                                    placeholderTextColor={COLORS.textSecondary}
+                                    placeholderTextColor={colors.textSecondary}
                                 />
                             </View>
                             <TouchableOpacity
                                 style={[styles.copyButton, copiedForeign && { backgroundColor: `${activeColor}1A` }]}
                                 onPress={() => copyToClipboard(foreignAmount, 'foreign')}
                             >
-                                {copiedForeign ? <Check size={16} color={activeColor} /> : <Copy size={16} color={COLORS.textSecondary} />}
+                                {copiedForeign ? <Check size={16} color={activeColor} /> : <Copy size={16} color={colors.textSecondary} />}
                             </TouchableOpacity>
                             <Text style={styles.currencySubLabel}>{getCurrencyLabel()}</Text>
                         </View>
@@ -388,14 +513,14 @@ _Enviado desde Kuanto App_ 📲`;
             </View>
 
             <Text style={styles.rateInfo}>
-                Tasa aplicada: <Text style={{ fontWeight: 'bold', color: useTomorrow && hasNextRates ? activeColor : COLORS.textPrimary }}>
+                Tasa aplicada: <Text style={{ fontWeight: 'bold', color: useTomorrow && hasNextRates ? activeColor : colors.textPrimary }}>
                     {formatCurrency(currentRate)} Bs {useTomorrow && hasNextRates ? `(${getFriendlyNextDate()})` : '(Hoy)'}
                 </Text>
             </Text>
 
             <View style={styles.actionRow}>
                 <TouchableOpacity style={styles.actionButton} onPress={handleReset}>
-                    <RotateCcw size={18} color={COLORS.textSecondary} />
+                    <RotateCcw size={18} color={colors.textSecondary} />
                     <Text style={styles.actionButtonText}>Reiniciar</Text>
                 </TouchableOpacity>
 
@@ -409,165 +534,5 @@ _Enviado desde Kuanto App_ 📲`;
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    container: {
-        backgroundColor: COLORS.card,
-        borderRadius: 24,
-        padding: 20,
-        marginBottom: 20,
-        elevation: 8,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    headerRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    title: {
-        color: COLORS.textPrimary,
-        fontSize: 18,
-        fontWeight: '700',
-    },
-    tomorrowToggle: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    tomorrowToggleSubtitle: {
-        color: COLORS.textSecondary,
-        fontSize: 9,
-        fontWeight: '700',
-        textTransform: 'uppercase',
-        letterSpacing: 0.5,
-        marginBottom: -2,
-    },
-    tomorrowToggleText: {
-        color: COLORS.textSecondary,
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    selectorContainer: {
-        flexDirection: 'row',
-        marginBottom: 24,
-        gap: 8,
-    },
-    chip: {
-        flex: 1,
-        paddingVertical: 10,
-        borderRadius: 14,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'transparent',
-    },
-    chipText: {
-        color: COLORS.textSecondary,
-        fontSize: 12,
-        fontWeight: '600',
-        textAlign: 'center',
-    },
-    converterBox: {
-        backgroundColor: 'rgba(0,0,0,0.2)',
-        borderRadius: 20,
-        padding: 16,
-    },
-    inputSection: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 8,
-    },
-    inputWrapper: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    inputLabel: {
-        color: COLORS.textSecondary,
-        fontSize: 20,
-        fontWeight: '600',
-        width: 35,
-    },
-    input: {
-        flex: 1,
-        color: COLORS.textPrimary,
-        fontSize: 26,
-        fontWeight: '800',
-        padding: 0,
-    },
-    copyButton: {
-        padding: 10,
-        borderRadius: 10,
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        marginHorizontal: 8,
-    },
-    currencySubLabel: {
-        color: COLORS.textSecondary,
-        fontSize: 10,
-        fontWeight: '700',
-        letterSpacing: 1,
-        width: 50,
-        textAlign: 'right',
-    },
-    divider: {
-        height: 1,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        marginVertical: 12,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    swapButton: {
-        backgroundColor: COLORS.card,
-        padding: 8,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: COLORS.glassBorder,
-    },
-    rateInfo: {
-        color: COLORS.textSecondary,
-        fontSize: 12,
-        marginTop: 16,
-        textAlign: 'center',
-        marginBottom: 4,
-    },
-    actionRow: {
-        flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginTop: 20,
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        borderRadius: 16,
-        padding: 4,
-        alignSelf: 'center',
-        gap: 4
-    },
-    actionButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        gap: 8,
-        borderRadius: 12,
-    },
-    actionDivider: {
-        width: 1,
-        height: 20,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-    },
-    actionButtonText: {
-        color: COLORS.textSecondary,
-        fontSize: 14,
-        fontWeight: '600',
-    }
-});
 
 export default CurrencyConverter;

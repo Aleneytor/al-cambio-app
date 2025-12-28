@@ -1,13 +1,14 @@
 import React from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import CurrencyConverter from '../components/CurrencyConverter';
 import { useRates } from '../context/RateContext';
 import { RefreshCcw } from 'lucide-react-native';
 
 const ConverterScreen = ({ route }) => {
     const { rates, refreshRates, loading } = useRates();
-    const initialCurrency = route.params?.initialCurrency; // Get param
+    const { colors, isDark } = useTheme();
+    const initialCurrency = route.params?.initialCurrency;
 
     const [resetKey, setResetKey] = React.useState(0);
 
@@ -17,18 +18,21 @@ const ConverterScreen = ({ route }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
                 <View>
-                    <Text style={styles.headerTitle}>Calculadora</Text>
-                    <Text style={styles.headerSubtitle}>Conversión de divisas al instante</Text>
+                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Calculadora</Text>
+                    <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Conversión de divisas al instante</Text>
                 </View>
                 <TouchableOpacity
-                    style={styles.refreshButton}
+                    style={[styles.refreshButton, {
+                        backgroundColor: colors.glass,
+                        borderColor: colors.glassBorder
+                    }]}
                     onPress={handleRefresh}
                     disabled={loading}
                 >
-                    <RefreshCcw color={COLORS.textPrimary} size={20} style={loading ? { opacity: 0.5 } : {}} />
+                    <RefreshCcw color={colors.textPrimary} size={20} style={loading ? { opacity: 0.5 } : {}} />
                 </TouchableOpacity>
             </View>
 
@@ -39,8 +43,11 @@ const ConverterScreen = ({ route }) => {
             >
                 <CurrencyConverter key={resetKey} rates={rates} initialCurrency={initialCurrency} />
 
-                <View style={styles.infoBox}>
-                    <Text style={styles.infoText}>
+                <View style={[styles.infoBox, {
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)',
+                    borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+                }]}>
+                    <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                         Esta calculadora utiliza las tasas oficiales del BCV y el promedio del paralelo para realizar los cálculos.
                     </Text>
                 </View>
@@ -52,7 +59,6 @@ const ConverterScreen = ({ route }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
     },
     header: {
         flexDirection: 'row',
@@ -63,21 +69,17 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     refreshButton: {
-        backgroundColor: COLORS.glass,
         padding: 14,
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: COLORS.glassBorder,
     },
     headerTitle: {
         fontSize: 32,
         fontWeight: '800',
-        color: COLORS.textPrimary,
         letterSpacing: -0.5,
     },
     headerSubtitle: {
         fontSize: 15,
-        color: COLORS.textSecondary,
         marginTop: 6,
         fontWeight: '500',
     },
@@ -88,13 +90,10 @@ const styles = StyleSheet.create({
     infoBox: {
         marginTop: 20,
         padding: 16,
-        backgroundColor: 'rgba(255,255,255,0.03)',
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
     },
     infoText: {
-        color: COLORS.textSecondary,
         fontSize: 13,
         lineHeight: 20,
         textAlign: 'center',

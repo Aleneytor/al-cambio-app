@@ -2,10 +2,11 @@ import React, { useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Share as NativeShare, Animated } from 'react-native';
 import { Calendar, Clock, TrendingUp as Up, TrendingDown as Down, Share2 as ShareIcon } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { formatCurrency } from '../utils/formatting';
 
 const RateCard = ({ title, rate, color, icon, nextRate, nextDate, nextRawDate, lastUpdated, change, onPress, index = 0 }) => {
+    const { colors, isDark } = useTheme();
     const isPositive = change > 0;
 
     // Animation values
@@ -80,6 +81,79 @@ _Enviado desde Kuanto App_ 📲`;
         return nextRawDate === tomorrowISO ? "Para mañana" : "Próxima tasa";
     };
 
+    const styles = StyleSheet.create({
+        card: {
+            backgroundColor: colors.card,
+            borderRadius: 20,
+            padding: 20,
+            marginBottom: 16,
+            elevation: 5,
+            shadowColor: isDark ? "#000" : "#888",
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: isDark ? 0.2 : 0.15,
+            shadowRadius: 5,
+        },
+        cardHeader: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: 12,
+        },
+        iconContainer: {
+            padding: 8,
+            borderRadius: 10,
+            marginRight: 12,
+        },
+        cardTitle: {
+            fontSize: 16,
+            color: colors.textSecondary,
+            fontWeight: '600',
+        },
+        rateRow: {
+            flexDirection: 'row',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            marginBottom: 12,
+        },
+        rateText: {
+            fontSize: 40,
+            fontWeight: '800',
+        },
+        changeBadge: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 8,
+            paddingVertical: 4,
+            borderRadius: 6,
+            marginBottom: 8,
+        },
+        changeText: {
+            fontSize: 12,
+            fontWeight: '700',
+            marginLeft: 4,
+        },
+        footerInfo: {
+            marginTop: 4,
+        },
+        badge: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)',
+            paddingVertical: 8,
+            paddingHorizontal: 12,
+            borderRadius: 8,
+            alignSelf: 'flex-start',
+            marginBottom: 8,
+        },
+        badgeText: {
+            color: colors.textSecondary,
+            fontSize: 13,
+            fontWeight: '500',
+        },
+        shareButton: {
+            padding: 8,
+        },
+    });
+
     return (
         <Animated.View
             style={{
@@ -99,7 +173,7 @@ _Enviado desde Kuanto App_ 📲`;
                         <Text style={styles.cardTitle}>{title}</Text>
                     </View>
                     <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-                        <ShareIcon size={18} color={COLORS.textSecondary} />
+                        <ShareIcon size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
                 </View>
 
@@ -118,18 +192,18 @@ _Enviado desde Kuanto App_ 📲`;
                 <View style={styles.footerInfo}>
                     {nextRate && (
                         <View style={styles.badge}>
-                            <Calendar size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
+                            <Calendar size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
                             <Text style={styles.badgeText}>
-                                {getNextRateLabel()} ({nextDate}): <Text style={{ color: COLORS.textPrimary }}>{formatCurrency(nextRate)} Bs</Text>
+                                {getNextRateLabel()} ({nextDate}): <Text style={{ color: colors.textPrimary }}>{formatCurrency(nextRate)} Bs</Text>
                             </Text>
                         </View>
                     )}
 
                     {lastUpdated && (
                         <View style={styles.badge}>
-                            <Clock size={14} color={COLORS.textSecondary} style={{ marginRight: 6 }} />
+                            <Clock size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
                             <Text style={styles.badgeText}>
-                                Actualizado: <Text style={{ color: COLORS.textPrimary }}>{lastUpdated}</Text>
+                                Actualizado: <Text style={{ color: colors.textPrimary }}>{lastUpdated}</Text>
                             </Text>
                         </View>
                     )}
@@ -138,75 +212,5 @@ _Enviado desde Kuanto App_ 📲`;
         </Animated.View>
     );
 };
-
-const styles = StyleSheet.create({
-    card: {
-        backgroundColor: COLORS.card,
-        borderRadius: 20,
-        padding: 20,
-        marginBottom: 16,
-        elevation: 5,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.2,
-        shadowRadius: 5,
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 12,
-    },
-    iconContainer: {
-        padding: 8,
-        borderRadius: 10,
-        marginRight: 12,
-    },
-    cardTitle: {
-        fontSize: 16,
-        color: COLORS.textSecondary,
-        fontWeight: '600',
-    },
-    rateRow: {
-        flexDirection: 'row',
-        alignItems: 'flex-end',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-    },
-    rateText: {
-        fontSize: 40,
-        fontWeight: '800',
-    },
-    changeBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 6,
-        marginBottom: 8,
-    },
-    changeText: {
-        fontSize: 12,
-        fontWeight: '700',
-        marginLeft: 4,
-    },
-    footerInfo: {
-        marginTop: 4,
-    },
-    badge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        paddingVertical: 8,
-        paddingHorizontal: 12,
-        borderRadius: 8,
-        alignSelf: 'flex-start',
-        marginBottom: 8,
-    },
-    badgeText: {
-        color: COLORS.textSecondary,
-        fontSize: 13,
-        fontWeight: '500',
-    },
-});
 
 export default RateCard;

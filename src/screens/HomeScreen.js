@@ -2,7 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, RefreshControl, FlatList, Animated, Platform } from 'react-native';
 import { Banknote, RefreshCcw, TrendingUp, DollarSign, History, ChevronRight, Info } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import RateCard from '../components/RateCard';
 import SkeletonCard from '../components/SkeletonCard';
 import { useRates } from '../context/RateContext';
@@ -10,6 +10,7 @@ import { formatCurrency } from '../utils/formatting';
 
 const HomeScreen = ({ navigation }) => {
     const { rates, loading, refreshRates, order } = useRates();
+    const { colors, isDark } = useTheme();
     const scrollY = useRef(new Animated.Value(0)).current;
 
     const formatDate = (dateStr) => {
@@ -28,8 +29,8 @@ const HomeScreen = ({ navigation }) => {
                 id: 'usd',
                 title: 'Tasa BCV (USD)',
                 rate: rates.bcv,
-                color: COLORS.bcvGreen,
-                icon: <DollarSign color={COLORS.bcvGreen} size={24} />,
+                color: colors.bcvGreen,
+                icon: <DollarSign color={colors.bcvGreen} size={24} />,
                 nextRate: rates.nextRates?.usd,
                 nextDate: rates.nextRates?.date,
                 nextRawDate: rates.nextRates?.rawDate,
@@ -39,8 +40,8 @@ const HomeScreen = ({ navigation }) => {
                 id: 'eur',
                 title: 'Tasa BCV (EUR)',
                 rate: rates.euro,
-                color: COLORS.euroBlue,
-                icon: <Banknote color={COLORS.euroBlue} size={24} />,
+                color: colors.euroBlue,
+                icon: <Banknote color={colors.euroBlue} size={24} />,
                 nextRate: rates.nextRates?.eur,
                 nextDate: rates.nextRates?.date,
                 nextRawDate: rates.nextRates?.rawDate,
@@ -50,14 +51,14 @@ const HomeScreen = ({ navigation }) => {
                 id: 'parallel',
                 title: 'Promedio USDT',
                 rate: rates.parallel,
-                color: COLORS.parallelOrange,
-                icon: <TrendingUp color={COLORS.parallelOrange} size={24} />,
+                color: colors.parallelOrange,
+                icon: <TrendingUp color={colors.parallelOrange} size={24} />,
                 lastUpdated: rates.parallelUpdate
             }
         };
 
         return order.map(id => dataMap[id]);
-    }, [rates, order]);
+    }, [rates, order, colors]);
 
     // Check if we have real data loaded
     const hasData = rates.bcv > 0;
@@ -80,19 +81,24 @@ const HomeScreen = ({ navigation }) => {
             ]}
         >
             <View>
-                <Text style={styles.headerTitle}>Tasas del Día</Text>
-                <Text style={styles.headerSubtitle}>{new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
-                <Text style={[styles.hintText, { marginTop: 12, textAlign: 'left', fontSize: 13 }]}>👉 Toca una tarjeta para calcular</Text>
+                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Tasas del Día</Text>
+                <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+                    {new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </Text>
+                <Text style={[styles.hintText, { color: colors.textSecondary }]}>👉 Toca una tarjeta para calcular</Text>
             </View>
             <TouchableOpacity
-                style={styles.infoButton}
+                style={[styles.infoButton, {
+                    backgroundColor: colors.glass,
+                    borderColor: colors.glassBorder
+                }]}
                 onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     navigation.navigate('Legal');
                 }}
                 activeOpacity={0.7}
             >
-                <Info size={24} color={COLORS.textSecondary} />
+                <Info size={24} color={colors.textSecondary} />
             </TouchableOpacity>
         </Animated.View>
     );
@@ -108,35 +114,42 @@ const HomeScreen = ({ navigation }) => {
                         activeOpacity={0.7}
                     >
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                            <History size={18} color={COLORS.textSecondary} />
-                            <Text style={styles.sectionTitle}>Historial Última Semana</Text>
+                            <History size={18} color={colors.textSecondary} />
+                            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Historial Última Semana</Text>
                         </View>
-                        <ChevronRight size={16} color={COLORS.textSecondary} />
+                        <ChevronRight size={16} color={colors.textSecondary} />
                     </TouchableOpacity>
-                    <View style={styles.historyCard}>
-                        <View style={styles.historyHeader}>
-                            <Text style={styles.historyLabel}>Fecha</Text>
-                            <Text style={[styles.historyLabel, { textAlign: 'right' }]}>USD BCV</Text>
-                            <Text style={[styles.historyLabel, { textAlign: 'right' }]}>EUR BCV</Text>
+                    <View style={[styles.historyCard, { backgroundColor: colors.card }]}>
+                        <View style={[styles.historyHeader, { borderBottomColor: colors.divider }]}>
+                            <Text style={[styles.historyLabel, { color: colors.textSecondary }]}>Fecha</Text>
+                            <Text style={[styles.historyLabel, { color: colors.textSecondary, textAlign: 'right' }]}>USD BCV</Text>
+                            <Text style={[styles.historyLabel, { color: colors.textSecondary, textAlign: 'right' }]}>EUR BCV</Text>
                         </View>
                         {rates.history.map((item, index) => (
-                            <View key={item.date} style={[styles.historyRow, index === rates.history.length - 1 && { borderBottomWidth: 0 }]}>
-                                <Text style={styles.historyDate}>{formatDate(item.date)}</Text>
-                                <Text style={styles.historyValue}>{formatCurrency(item.usd)}</Text>
-                                <Text style={styles.historyValue}>{formatCurrency(item.eur)}</Text>
+                            <View
+                                key={item.date}
+                                style={[
+                                    styles.historyRow,
+                                    { borderBottomColor: colors.divider },
+                                    index === rates.history.length - 1 && { borderBottomWidth: 0 }
+                                ]}
+                            >
+                                <Text style={[styles.historyDate, { color: colors.textPrimary }]}>{formatDate(item.date)}</Text>
+                                <Text style={[styles.historyValue, { color: colors.textPrimary }]}>{formatCurrency(item.usd)}</Text>
+                                <Text style={[styles.historyValue, { color: colors.textPrimary }]}>{formatCurrency(item.eur)}</Text>
                             </View>
                         ))}
                     </View>
                 </View>
             )}
             <View style={styles.footerInfo}>
-                <Text style={styles.footerText}>Datos oficiales del Banco Central de Venezuela</Text>
+                <Text style={[styles.footerText, { color: colors.textSecondary }]}>Datos oficiales del Banco Central de Venezuela</Text>
             </View>
         </>
     );
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <Animated.FlatList
                 data={hasData ? cardData : [{ id: 'sk1' }, { id: 'sk2' }, { id: 'sk3' }]}
                 keyExtractor={(item) => item.id}
@@ -154,7 +167,8 @@ const HomeScreen = ({ navigation }) => {
                     <RefreshControl
                         refreshing={loading}
                         onRefresh={() => refreshRates(true)}
-                        tintColor={COLORS.bcvGreen}
+                        tintColor={colors.bcvGreen}
+                        colors={[colors.bcvGreen]}
                     />
                 }
             />
@@ -165,7 +179,6 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
     },
     header: {
         flexDirection: 'row',
@@ -177,28 +190,17 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 32,
         fontWeight: '800',
-        color: COLORS.textPrimary,
         letterSpacing: -0.5,
     },
     headerSubtitle: {
         fontSize: 15,
-        color: COLORS.textSecondary,
         marginTop: 6,
         fontWeight: '500',
     },
-    refreshButton: {
-        backgroundColor: COLORS.glass,
-        padding: 14,
-        borderRadius: 14,
-        borderWidth: 1,
-        borderColor: COLORS.glassBorder,
-    },
     infoButton: {
-        backgroundColor: COLORS.glass,
         padding: 14,
         borderRadius: 14,
         borderWidth: 1,
-        borderColor: COLORS.glassBorder,
     },
     scrollContent: {
         paddingHorizontal: 20,
@@ -214,14 +216,12 @@ const styles = StyleSheet.create({
         marginBottom: 12,
     },
     sectionTitle: {
-        color: COLORS.textSecondary,
         fontSize: 14,
         fontWeight: '700',
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
     historyCard: {
-        backgroundColor: COLORS.card,
         borderRadius: 20,
         padding: 16,
     },
@@ -229,11 +229,9 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         paddingBottom: 12,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
     },
     historyLabel: {
         flex: 1,
-        color: COLORS.textSecondary,
         fontSize: 12,
         fontWeight: '700',
     },
@@ -241,17 +239,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         paddingVertical: 12,
         borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255,255,255,0.05)',
     },
     historyDate: {
         flex: 1,
-        color: COLORS.textPrimary,
         fontSize: 14,
         fontWeight: '600',
     },
     historyValue: {
         flex: 1,
-        color: COLORS.textPrimary,
         fontSize: 14,
         textAlign: 'right',
         fontVariant: ['tabular-nums'],
@@ -261,16 +256,14 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     footerText: {
-        color: COLORS.textSecondary,
         fontSize: 12,
         textAlign: 'center',
     },
     hintText: {
-        color: COLORS.textSecondary,
         fontSize: 13,
         fontWeight: '600',
-        marginBottom: 8,
-        textAlign: 'center',
+        marginTop: 12,
+        textAlign: 'left',
         opacity: 0.8
     }
 });

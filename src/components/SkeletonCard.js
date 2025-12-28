@@ -1,8 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { StyleSheet, View, Animated } from 'react-native';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const SkeletonCard = ({ index = 0 }) => {
+    const { colors, isDark } = useTheme();
     const shimmerAnim = useRef(new Animated.Value(0)).current;
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(20)).current;
@@ -50,11 +51,14 @@ const SkeletonCard = ({ index = 0 }) => {
         outputRange: [0.3, 0.7],
     });
 
+    const placeholderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+
     return (
         <Animated.View
             style={[
                 styles.card,
                 {
+                    backgroundColor: colors.card,
                     opacity: fadeAnim,
                     transform: [{ translateY: slideAnim }],
                 },
@@ -62,16 +66,16 @@ const SkeletonCard = ({ index = 0 }) => {
         >
             {/* Header row */}
             <View style={styles.headerRow}>
-                <Animated.View style={[styles.iconPlaceholder, { opacity: shimmerOpacity }]} />
-                <Animated.View style={[styles.titlePlaceholder, { opacity: shimmerOpacity }]} />
+                <Animated.View style={[styles.iconPlaceholder, { backgroundColor: placeholderColor, opacity: shimmerOpacity }]} />
+                <Animated.View style={[styles.titlePlaceholder, { backgroundColor: placeholderColor, opacity: shimmerOpacity }]} />
             </View>
 
             {/* Rate row */}
-            <Animated.View style={[styles.ratePlaceholder, { opacity: shimmerOpacity }]} />
+            <Animated.View style={[styles.ratePlaceholder, { backgroundColor: placeholderColor, opacity: shimmerOpacity }]} />
 
             {/* Badge row */}
             <View style={styles.badgeRow}>
-                <Animated.View style={[styles.badgePlaceholder, { opacity: shimmerOpacity }]} />
+                <Animated.View style={[styles.badgePlaceholder, { backgroundColor: placeholderColor, opacity: shimmerOpacity }]} />
             </View>
         </Animated.View>
     );
@@ -79,7 +83,6 @@ const SkeletonCard = ({ index = 0 }) => {
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: COLORS.card,
         borderRadius: 20,
         padding: 20,
         marginBottom: 16,
@@ -93,20 +96,17 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 10,
-        backgroundColor: COLORS.cardElevated,
         marginRight: 12,
     },
     titlePlaceholder: {
         width: 140,
         height: 18,
         borderRadius: 8,
-        backgroundColor: COLORS.cardElevated,
     },
     ratePlaceholder: {
         width: 200,
         height: 44,
         borderRadius: 10,
-        backgroundColor: COLORS.cardElevated,
         marginBottom: 16,
     },
     badgeRow: {
@@ -116,7 +116,6 @@ const styles = StyleSheet.create({
         width: '70%',
         height: 32,
         borderRadius: 8,
-        backgroundColor: COLORS.cardElevated,
     },
 });
 

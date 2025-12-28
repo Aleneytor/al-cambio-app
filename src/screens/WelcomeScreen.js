@@ -1,24 +1,29 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Dimensions, Image } from 'react-native';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { ArrowRight, TrendingUp, Calculator, Bell } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
-const FeatureItem = ({ icon, title, description }) => (
-    <View style={styles.featureItem}>
-        <View style={styles.iconContainer}>
-            {icon}
-        </View>
-        <View style={styles.textContainer}>
-            <Text style={styles.featureTitle}>{title}</Text>
-            <Text style={styles.featureDescription}>{description}</Text>
-        </View>
-    </View>
-);
-
 const WelcomeScreen = ({ navigation }) => {
+    const { colors, isDark } = useTheme();
+
+    const FeatureItem = ({ icon, title, description }) => (
+        <View style={styles.featureItem}>
+            <View style={[styles.iconContainer, {
+                backgroundColor: colors.card,
+                borderColor: colors.glassBorder
+            }]}>
+                {icon}
+            </View>
+            <View style={styles.textContainer}>
+                <Text style={[styles.featureTitle, { color: colors.textPrimary }]}>{title}</Text>
+                <Text style={[styles.featureDescription, { color: colors.textSecondary }]}>{description}</Text>
+            </View>
+        </View>
+    );
+
     const onGetStarted = async () => {
         try {
             await AsyncStorage.setItem('@app_intro_shown', 'true');
@@ -32,42 +37,49 @@ const WelcomeScreen = ({ navigation }) => {
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.content}>
                 <View style={styles.header}>
-                    <View style={styles.logoWrapper}>
+                    <View style={[styles.logoWrapper, {
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                        borderRadius: 30,
+                        padding: 16,
+                    }]}>
                         <Image
                             source={require('../../assets/logo.png')}
                             style={styles.logoImage}
                             resizeMode="contain"
                         />
                     </View>
-                    <Text style={styles.sloganText}>
+                    <Text style={[styles.sloganText, { color: colors.textPrimary }]}>
                         No preguntes cuánto,{"\n"}
-                        revisa <Text style={styles.sloganHighlight}>Kuanto</Text>.
+                        revisa <Text style={[styles.sloganHighlight, { color: colors.bcvGreen }]}>Kuanto</Text>.
                     </Text>
                 </View>
 
                 <View style={styles.featuresContainer}>
                     <FeatureItem
-                        icon={<TrendingUp color={COLORS.bcvGreen} size={24} />}
+                        icon={<TrendingUp color={colors.bcvGreen} size={24} />}
                         title="Tasas en Tiempo Real"
                         description="Consulta el valor oficial del BCV y el promedio paralelo USDT al instante."
                     />
                     <FeatureItem
-                        icon={<Calculator color={COLORS.euroBlue} size={24} />}
+                        icon={<Calculator color={colors.euroBlue} size={24} />}
                         title="Calculadora Inteligente"
                         description="Convierte entre USD, EUR y Bolívares de forma rápida y sencilla."
                     />
                     <FeatureItem
-                        icon={<Bell color={COLORS.parallelOrange} size={24} />}
+                        icon={<Bell color={colors.parallelOrange} size={24} />}
                         title="Alertas Diarias"
                         description="Recibe notificaciones con la tasa actualizada del dólar, sin tener que entrar a la app."
                     />
                 </View>
 
                 <TouchableOpacity
-                    style={styles.button}
+                    style={[styles.button, {
+                        backgroundColor: colors.bcvGreen,
+                        shadowColor: colors.bcvGreen
+                    }]}
                     onPress={onGetStarted}
                     activeOpacity={0.8}
                 >
@@ -82,7 +94,6 @@ const WelcomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
     },
     content: {
         flex: 1,
@@ -106,12 +117,10 @@ const styles = StyleSheet.create({
     sloganText: {
         fontSize: 24,
         fontWeight: '600',
-        color: COLORS.textPrimary,
         textAlign: 'center',
         lineHeight: 32,
     },
     sloganHighlight: {
-        color: COLORS.bcvGreen,
         fontWeight: '800',
     },
     featuresContainer: {
@@ -126,12 +135,10 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 18,
-        backgroundColor: COLORS.card,
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 20,
         borderWidth: 1,
-        borderColor: COLORS.glassBorder,
     },
     textContainer: {
         flex: 1,
@@ -139,22 +146,18 @@ const styles = StyleSheet.create({
     featureTitle: {
         fontSize: 18,
         fontWeight: '700',
-        color: COLORS.textPrimary,
         marginBottom: 4,
     },
     featureDescription: {
         fontSize: 14,
-        color: COLORS.textSecondary,
         lineHeight: 20,
     },
     button: {
-        backgroundColor: COLORS.bcvGreen,
         borderRadius: 20,
         paddingVertical: 18,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
-        shadowColor: COLORS.bcvGreen,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 16,

@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, Animated, Dimensions, View } from 'react-native';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react-native';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 const Toast = ({ message, visible, type = 'success', onHide }) => {
+    const { colors, isDark } = useTheme();
     const translateY = useRef(new Animated.Value(100)).current;
     const opacity = useRef(new Animated.Value(0)).current;
 
@@ -14,7 +15,7 @@ const Toast = ({ message, visible, type = 'success', onHide }) => {
             // Show animation
             Animated.parallel([
                 Animated.spring(translateY, {
-                    toValue: -110, // Positioning above the tab bar
+                    toValue: -110,
                     useNativeDriver: true,
                     friction: 8,
                     tension: 40,
@@ -56,9 +57,9 @@ const Toast = ({ message, visible, type = 'success', onHide }) => {
 
     const getIcon = () => {
         switch (type) {
-            case 'success': return <CheckCircle2 size={20} color={COLORS.bcvGreen} />;
+            case 'success': return <CheckCircle2 size={20} color={colors.bcvGreen} />;
             case 'error': return <AlertCircle size={20} color="#ff3b30" />;
-            default: return <Info size={20} color={COLORS.euroBlue} />;
+            default: return <Info size={20} color={colors.euroBlue} />;
         }
     };
 
@@ -74,9 +75,12 @@ const Toast = ({ message, visible, type = 'success', onHide }) => {
                 },
             ]}
         >
-            <View style={styles.content}>
+            <View style={[styles.content, {
+                backgroundColor: isDark ? 'rgba(44, 44, 46, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
+            }]}>
                 {getIcon()}
-                <Text style={styles.message}>{message}</Text>
+                <Text style={[styles.message, { color: colors.textPrimary }]}>{message}</Text>
             </View>
         </Animated.View>
     );
@@ -95,12 +99,10 @@ const styles = StyleSheet.create({
     content: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: COLORS.glass,
         paddingHorizontal: 16,
         paddingVertical: 12,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: COLORS.glassBorder,
         gap: 10,
         width: 'auto',
         maxWidth: width - 40,
@@ -111,7 +113,6 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     message: {
-        color: COLORS.textPrimary,
         fontSize: 14,
         fontWeight: '600',
     },

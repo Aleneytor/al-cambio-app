@@ -4,13 +4,14 @@ import { LineChart } from 'react-native-gifted-charts';
 import { ArrowLeft, TrendingUp, Calendar, Info } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useRates } from '../context/RateContext';
-import { COLORS } from '../theme/colors';
+import { useTheme } from '../context/ThemeContext';
 import { formatCurrency } from '../utils/formatting';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const HistoryScreen = ({ navigation }) => {
     const { rates, loading } = useRates();
+    const { colors, isDark } = useTheme();
     const [selectedPoint, setSelectedPoint] = useState(null);
 
     // Prepare chart data
@@ -20,7 +21,7 @@ const HistoryScreen = ({ navigation }) => {
         dataPointText: formatCurrency(item.usd),
         fullDate: item.date,
         eurValue: item.eur
-    })).reverse(); // Reverse to show chronological order
+    })).reverse();
 
     const eurData = (rates.history || []).map(item => ({
         value: item.eur,
@@ -29,44 +30,47 @@ const HistoryScreen = ({ navigation }) => {
 
     if (loading && chartData.length === 0) {
         return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={COLORS.bcvGreen} />
+            <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+                <ActivityIndicator size="large" color={colors.bcvGreen} />
             </View>
         );
     }
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
                 <TouchableOpacity
                     onPress={() => navigation.goBack()}
-                    style={styles.backButton}
+                    style={[styles.backButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}
                 >
-                    <ArrowLeft size={24} color={COLORS.textPrimary} />
+                    <ArrowLeft size={24} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <View>
-                    <Text style={styles.headerTitle}>Análisis Semanal</Text>
-                    <Text style={styles.headerSubtitle}>Evolución de la Tasa BCV</Text>
+                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Análisis Semanal</Text>
+                    <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Evolución de la Tasa BCV</Text>
                 </View>
             </View>
 
             <View style={styles.content}>
                 {/* Stats Summary */}
-                <View style={styles.statsContainer}>
+                <View style={[styles.statsContainer, {
+                    backgroundColor: colors.card,
+                    borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+                }]}>
                     <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Variación USD</Text>
+                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Variación USD</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <TrendingUp size={16} color={rates.usdChange >= 0 ? COLORS.bcvGreen : '#FF3B30'} />
-                            <Text style={[styles.statValue, { color: rates.usdChange >= 0 ? COLORS.bcvGreen : '#FF3B30' }]}>
+                            <TrendingUp size={16} color={rates.usdChange >= 0 ? colors.bcvGreen : '#FF3B30'} />
+                            <Text style={[styles.statValue, { color: rates.usdChange >= 0 ? colors.bcvGreen : '#FF3B30' }]}>
                                 {rates.usdChange >= 0 ? '+' : ''}{rates.usdChange}%
                             </Text>
                         </View>
                     </View>
                     <View style={styles.statItem}>
-                        <Text style={styles.statLabel}>Variación EUR</Text>
+                        <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Variación EUR</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                            <TrendingUp size={16} color={rates.eurChange >= 0 ? COLORS.bcvGreen : '#FF3B30'} />
-                            <Text style={[styles.statValue, { color: rates.eurChange >= 0 ? COLORS.bcvGreen : '#FF3B30' }]}>
+                            <TrendingUp size={16} color={rates.eurChange >= 0 ? colors.bcvGreen : '#FF3B30'} />
+                            <Text style={[styles.statValue, { color: rates.eurChange >= 0 ? colors.bcvGreen : '#FF3B30' }]}>
                                 {rates.eurChange >= 0 ? '+' : ''}{rates.eurChange}%
                             </Text>
                         </View>
@@ -76,34 +80,43 @@ const HistoryScreen = ({ navigation }) => {
                 {/* Selected Point Info */}
                 <View style={styles.selectionInfo}>
                     {selectedPoint ? (
-                        <View style={styles.selectionCard}>
+                        <View style={[styles.selectionCard, {
+                            backgroundColor: colors.card,
+                            borderColor: colors.glassBorder
+                        }]}>
                             <View style={styles.selectionHeader}>
-                                <Calendar size={14} color={COLORS.textSecondary} />
-                                <Text style={styles.selectionDate}>
+                                <Calendar size={14} color={colors.textSecondary} />
+                                <Text style={[styles.selectionDate, { color: colors.textSecondary }]}>
                                     {new Date(selectedPoint.fullDate).toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' })}
                                 </Text>
                             </View>
                             <View style={styles.selectionRow}>
                                 <View>
-                                    <Text style={styles.selectionLabel}>USD BCV</Text>
-                                    <Text style={[styles.selectionValue, { color: COLORS.bcvGreen }]}>Bs. {formatCurrency(selectedPoint.value)}</Text>
+                                    <Text style={[styles.selectionLabel, { color: colors.textSecondary }]}>USD BCV</Text>
+                                    <Text style={[styles.selectionValue, { color: colors.bcvGreen }]}>Bs. {formatCurrency(selectedPoint.value)}</Text>
                                 </View>
-                                <View style={styles.selectionDivider} />
+                                <View style={[styles.selectionDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
                                 <View>
-                                    <Text style={styles.selectionLabel}>EUR BCV</Text>
-                                    <Text style={[styles.selectionValue, { color: COLORS.euroBlue }]}>Bs. {formatCurrency(selectedPoint.eurValue)}</Text>
+                                    <Text style={[styles.selectionLabel, { color: colors.textSecondary }]}>EUR BCV</Text>
+                                    <Text style={[styles.selectionValue, { color: colors.euroBlue }]}>Bs. {formatCurrency(selectedPoint.eurValue)}</Text>
                                 </View>
                             </View>
                         </View>
                     ) : (
-                        <View style={styles.hintContainer}>
-                            <Info size={16} color={COLORS.textSecondary} />
-                            <Text style={styles.hintText}>Desliza el dedo por la gráfica para ver detalles</Text>
+                        <View style={[styles.hintContainer, {
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                        }]}>
+                            <Info size={16} color={colors.textSecondary} />
+                            <Text style={[styles.hintText, { color: colors.textSecondary }]}>Desliza el dedo por la gráfica para ver detalles</Text>
                         </View>
                     )}
                 </View>
 
-                <View style={styles.chartContainer}>
+                <View style={[styles.chartContainer, {
+                    backgroundColor: colors.card,
+                    borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+                }]}>
                     <LineChart
                         data={chartData}
                         data2={eurData}
@@ -111,27 +124,26 @@ const HistoryScreen = ({ navigation }) => {
                         height={250}
                         spacing={50}
                         initialSpacing={20}
-                        color1={COLORS.bcvGreen}
-                        color2={COLORS.euroBlue}
+                        color1={colors.bcvGreen}
+                        color2={colors.euroBlue}
                         thickness={3}
-                        dataPointsColor1={COLORS.bcvGreen}
+                        dataPointsColor1={colors.bcvGreen}
                         dataPointsRadius={4}
                         noOfSections={4}
                         yAxisColor="transparent"
                         xAxisColor="transparent"
-                        yAxisTextStyle={{ color: COLORS.textSecondary, fontSize: 10 }}
-                        xAxisLabelTextStyle={{ color: COLORS.textSecondary, fontSize: 10 }}
+                        yAxisTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
+                        xAxisLabelTextStyle={{ color: colors.textSecondary, fontSize: 10 }}
                         hideRules
                         showVerticalLines={false}
                         pointerConfig={{
                             pointerStripUptoDataPoint: true,
-                            pointerStripColor: 'rgba(255,255,255,0.2)',
+                            pointerStripColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
                             pointerStripWidth: 2,
                             strokeDashArray: [2, 5],
-                            pointerColor: COLORS.bcvGreen,
+                            pointerColor: colors.bcvGreen,
                             radius: 6,
                             pointerLabelComponent: items => {
-                                // Provide haptic feedback on point change
                                 if (items[0]) {
                                     Haptics.selectionAsync();
                                 }
@@ -142,7 +154,6 @@ const HistoryScreen = ({ navigation }) => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             setSelectedPoint(item);
                         }}
-                        // Enable interaction on slide/touch
                         activatePointersOnLongPress={false}
                         autoAdjustPointerLabelPosition={true}
                     />
@@ -150,12 +161,12 @@ const HistoryScreen = ({ navigation }) => {
 
                 <View style={styles.legendContainer}>
                     <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: COLORS.bcvGreen }]} />
-                        <Text style={styles.legendText}>USD BCV</Text>
+                        <View style={[styles.legendDot, { backgroundColor: colors.bcvGreen }]} />
+                        <Text style={[styles.legendText, { color: colors.textSecondary }]}>USD BCV</Text>
                     </View>
                     <View style={styles.legendItem}>
-                        <View style={[styles.legendDot, { backgroundColor: COLORS.euroBlue }]} />
-                        <Text style={styles.legendText}>EUR BCV</Text>
+                        <View style={[styles.legendDot, { backgroundColor: colors.euroBlue }]} />
+                        <Text style={[styles.legendText, { color: colors.textSecondary }]}>EUR BCV</Text>
                     </View>
                 </View>
             </View>
@@ -166,11 +177,9 @@ const HistoryScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background,
     },
     loadingContainer: {
         flex: 1,
-        backgroundColor: COLORS.background,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -185,7 +194,6 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(255,255,255,0.05)',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
@@ -193,11 +201,9 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: '700',
-        color: COLORS.textPrimary,
     },
     headerSubtitle: {
         fontSize: 14,
-        color: COLORS.textSecondary,
         marginTop: 2,
     },
     content: {
@@ -206,12 +212,10 @@ const styles = StyleSheet.create({
     },
     statsContainer: {
         flexDirection: 'row',
-        backgroundColor: COLORS.card,
         borderRadius: 20,
         padding: 16,
         marginBottom: 20,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
     },
     statItem: {
         flex: 1,
@@ -219,7 +223,6 @@ const styles = StyleSheet.create({
     },
     statLabel: {
         fontSize: 12,
-        color: COLORS.textSecondary,
         fontWeight: '600',
         marginBottom: 4,
     },
@@ -233,11 +236,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     selectionCard: {
-        backgroundColor: COLORS.card,
         borderRadius: 20,
         padding: 16,
         borderWidth: 1,
-        borderColor: COLORS.glassBorder,
     },
     selectionHeader: {
         flexDirection: 'row',
@@ -247,7 +248,6 @@ const styles = StyleSheet.create({
     },
     selectionDate: {
         fontSize: 12,
-        color: COLORS.textSecondary,
         fontWeight: '700',
         textTransform: 'capitalize',
     },
@@ -258,7 +258,6 @@ const styles = StyleSheet.create({
     },
     selectionLabel: {
         fontSize: 10,
-        color: COLORS.textSecondary,
         fontWeight: '700',
         textAlign: 'center',
         marginBottom: 2,
@@ -271,32 +270,26 @@ const styles = StyleSheet.create({
     selectionDivider: {
         width: 1,
         height: 24,
-        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     hintContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 8,
-        backgroundColor: 'rgba(255,255,255,0.02)',
         paddingVertical: 12,
         borderRadius: 12,
         borderStyle: 'dashed',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
     },
     hintText: {
-        color: COLORS.textSecondary,
         fontSize: 13,
     },
     chartContainer: {
         alignItems: 'center',
         paddingRight: 15,
-        backgroundColor: COLORS.card,
         paddingVertical: 20,
         borderRadius: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
     },
     legendContainer: {
         flexDirection: 'row',
@@ -315,7 +308,6 @@ const styles = StyleSheet.create({
         borderRadius: 5,
     },
     legendText: {
-        color: COLORS.textSecondary,
         fontSize: 12,
         fontWeight: '600',
     }
