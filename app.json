@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/kuanto-adaptive-icon.png",
-        "backgroundColor": "#0d1a14"
+        "backgroundColor": "#0a1510"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.aleneytor.app"
