@@ -1,10 +1,10 @@
 {
   "expo": {
     "name": "Kuanto",
-    "slug": "kuanto",
+    "slug": "app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/Kuanto icono.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": false,
     "splash": {
@@ -17,8 +17,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1c1c1e"
+        "foregroundImage": "./assets/kuanto-adaptive-icon.png",
+        "backgroundColor": "#0d1a14"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.aleneytor.app"
@@ -26,10 +26,19 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-7187537412845196~7858770063"
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "0b90e25d-bbb6-4378-a85c-7254fbfe009b"
       }
-    }
+    },
+    "owner": "aleneytor"
   }
 }

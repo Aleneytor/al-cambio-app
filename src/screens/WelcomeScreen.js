@@ -40,18 +40,12 @@ const WelcomeScreen = ({ navigation }) => {
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.content}>
                 <View style={styles.header}>
-                    <View style={[styles.logoWrapper, {
-                        backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-                        borderRadius: 30,
-                        padding: 16,
-                    }]}>
-                        <Image
-                            source={require('../../assets/logo.png')}
-                            style={styles.logoImage}
-                            resizeMode="contain"
-                        />
-                    </View>
-                    <Text style={[styles.sloganText, { color: colors.textPrimary }]}>
+                    <Image
+                        source={require('../../assets/Logo nombre completo.png')}
+                        style={styles.logoImage}
+                        resizeMode="contain"
+                    />
+                    <Text style={[styles.sloganText, { color: colors.textSecondary }]}>
                         No preguntes cuánto,{"\n"}
                         revisa <Text style={[styles.sloganHighlight, { color: colors.bcvGreen }]}>Kuanto</Text>.
                     </Text>
@@ -107,12 +101,10 @@ const styles = StyleSheet.create({
         marginTop: 40,
         alignItems: 'center',
     },
-    logoWrapper: {
-        marginBottom: 20,
-    },
     logoImage: {
-        width: 120,
-        height: 120,
+        width: width * 0.7,
+        height: 80,
+        marginBottom: 24,
     },
     sloganText: {
         fontSize: 24,

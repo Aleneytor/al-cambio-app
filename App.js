@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavigationContainer, DarkTheme, DefaultTheme } from '@react-navigation/native';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Platform, SafeAreaView, StatusBar as RNStatusBar, LogBox } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -30,7 +30,7 @@ import { defineRateCheckTask, registerBackgroundFetch } from './src/services/bac
 // Define the background task globally
 defineRateCheckTask();
 
-const Tab = createMaterialTopTabNavigator();
+const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function SettingsStack() {
@@ -72,55 +72,31 @@ function MainTabs() {
         }
 
         return {
-          // Alineación exacta de colores y etiquetas
+          headerShown: false,
           tabBarActiveTintColor: activeColor,
           tabBarInactiveTintColor: colors.textSecondary,
           tabBarLabelStyle: {
             fontSize: 11,
             fontWeight: '700',
-            textTransform: 'none',
-            margin: 0,
-            padding: 0,
           },
-
-          // Cápsula de fondo (Indicador)
-          tabBarIndicatorStyle: {
-            backgroundColor: glowColor,
-            height: 46,
-            borderRadius: 16,
-            bottom: 7,
-          },
-
           tabBarStyle: {
-            backgroundColor: 'transparent',
+            backgroundColor: colors.card + 'F0',
+            borderTopWidth: 0,
             elevation: 0,
-            shadowOpacity: 0,
-            height: 60,
+            height: 95,
+            paddingBottom: 35,
+            paddingTop: 8,
+            position: 'absolute',
+            borderTopLeftRadius: 20,
+            borderTopRightRadius: 20,
           },
-
-          tabBarItemStyle: {
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            height: 60,
-          },
-
-          tabBarPressColor: `${activeColor}20`,
-          tabBarShowIcon: true,
-          tabBarIcon: ({ color }) => (
+          tabBarIcon: ({ color, focused }) => (
             <IconComponent
-              size={20}
+              size={22}
               color={color}
-              strokeWidth={2.5}
+              strokeWidth={focused ? 2.5 : 2}
             />
           ),
-          tabBarIconStyle: {
-            marginBottom: 2,
-            width: 24,
-            height: 24,
-            alignItems: 'center',
-            justifyContent: 'center',
-          },
         };
       }}
     >

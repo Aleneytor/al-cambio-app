@@ -1,9 +1,11 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import CurrencyConverter from '../components/CurrencyConverter';
 import { useRates } from '../context/RateContext';
 import { RefreshCcw, WifiOff } from 'lucide-react-native';
+import AdBanner from '../components/AdBanner';
+import NativeAdComponent from '../components/NativeAd';
 
 const ConverterScreen = ({ route }) => {
     const { rates, refreshRates, loading, isOffline, getTimeSinceUpdate } = useRates();
@@ -45,9 +47,16 @@ const ConverterScreen = ({ route }) => {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
-                <View>
-                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Calculadora</Text>
-                    <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Conversión de divisas al instante</Text>
+                <View style={styles.headerLeft}>
+                    <Image
+                        source={require('../../assets/logo.png')}
+                        style={styles.headerLogo}
+                        resizeMode="contain"
+                    />
+                    <View>
+                        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Calculadora</Text>
+                        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Conversión de divisas al instante</Text>
+                    </View>
                 </View>
                 <TouchableOpacity
                     style={[styles.refreshButton, {
@@ -81,7 +90,10 @@ const ConverterScreen = ({ route }) => {
                         }
                     </Text>
                 </View>
+
+                <NativeAdComponent style={{ marginHorizontal: 0, marginTop: 16 }} />
             </ScrollView>
+            <AdBanner style={styles.adBanner} />
         </View>
     );
 };
@@ -93,10 +105,20 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 24,
         marginTop: 8,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    headerLogo: {
+        width: 60,
+        height: 60,
     },
     refreshButton: {
         padding: 14,
@@ -115,7 +137,13 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 20,
-        paddingBottom: 40,
+        paddingBottom: 160,
+    },
+    adBanner: {
+        position: 'absolute',
+        bottom: 95,
+        left: 0,
+        right: 0,
     },
     infoBox: {
         marginTop: 20,

@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, RefreshControl, FlatList, Animated, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, RefreshControl, FlatList, Animated, Platform, Image } from 'react-native';
 import { Banknote, RefreshCcw, TrendingUp, DollarSign, History, ChevronRight, Info, WifiOff } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../context/ThemeContext';
@@ -7,6 +7,8 @@ import RateCard from '../components/RateCard';
 import SkeletonCard from '../components/SkeletonCard';
 import { useRates } from '../context/RateContext';
 import { formatCurrency } from '../utils/formatting';
+import AdBanner from '../components/AdBanner';
+import NativeAdComponent from '../components/NativeAd';
 
 const HomeScreen = ({ navigation }) => {
     const { rates, loading, refreshRates, order, isOffline, getTimeSinceUpdate } = useRates();
@@ -111,12 +113,18 @@ const HomeScreen = ({ navigation }) => {
                 { transform: [{ scale: headerScale }] }
             ]}
         >
-            <View>
-                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Tasas del Día</Text>
-                <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-                    {new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' })}
-                </Text>
-                <Text style={[styles.hintText, { color: colors.textSecondary }]}>👉 Toca una tarjeta para calcular</Text>
+            <View style={styles.headerLeft}>
+                <Image
+                    source={require('../../assets/logo.png')}
+                    style={styles.headerLogo}
+                    resizeMode="contain"
+                />
+                <View>
+                    <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Tasas del Día</Text>
+                    <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+                        {new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </Text>
+                </View>
             </View>
             <TouchableOpacity
                 style={[styles.infoButton, {
@@ -136,6 +144,9 @@ const HomeScreen = ({ navigation }) => {
 
     const Footer = (
         <>
+            {/* Native Ad between content and history */}
+            <NativeAdComponent style={{ marginHorizontal: 0 }} />
+
             {/* History Section */}
             {rates.history && rates.history.length > 0 && (
                 <View style={styles.historySection}>
@@ -204,6 +215,7 @@ const HomeScreen = ({ navigation }) => {
                     />
                 }
             />
+            <AdBanner style={styles.adBanner} />
         </View>
     );
 };
@@ -215,9 +227,19 @@ const styles = StyleSheet.create({
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        alignItems: 'center',
         paddingVertical: 24,
         marginBottom: 12,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    headerLogo: {
+        width: 60,
+        height: 60,
     },
     headerTitle: {
         fontSize: 32,
@@ -236,7 +258,13 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 20,
-        paddingBottom: 40,
+        paddingBottom: 160,
+    },
+    adBanner: {
+        position: 'absolute',
+        bottom: 95,
+        left: 0,
+        right: 0,
     },
     historySection: {
         marginTop: 24,

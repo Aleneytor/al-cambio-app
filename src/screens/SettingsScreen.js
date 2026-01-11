@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Linking, Share, Platform, Switch } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Linking, Share, Platform, Switch, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import {
@@ -23,6 +23,8 @@ import { useTheme } from '../context/ThemeContext';
 import { requestNotificationPermissions, scheduleDailyRateAlerts, cancelAllNotifications } from '../services/notificationService';
 import { registerBackgroundFetch, unregisterBackgroundFetch } from '../services/backgroundTaskService';
 import { useToast } from '../context/ToastContext';
+import AdBanner from '../components/AdBanner';
+import NativeAdComponent from '../components/NativeAd';
 
 const SettingsScreen = ({ navigation }) => {
     const { rates } = useRates();
@@ -157,18 +159,6 @@ const SettingsScreen = ({ navigation }) => {
                         navigation.navigate('Sources');
                     }
                 },
-                {
-                    id: 'welcome',
-                    icon: <Info size={20} color={colors.textSecondary} />,
-                    label: 'Ver Bienvenida',
-                    subtitle: 'Pantalla de presentación',
-                    onPress: async () => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        await AsyncStorage.removeItem('@app_intro_shown');
-                        showToast('Abriendo bienvenida...', 'info');
-                        navigation.navigate('Welcome');
-                    }
-                },
             ]
         },
         {
@@ -209,10 +199,10 @@ const SettingsScreen = ({ navigation }) => {
                     id: 'contact',
                     icon: <Mail size={20} color={colors.textSecondary} />,
                     label: 'Contactar',
-                    subtitle: 'soporte@alcambio.app',
+                    subtitle: 'soporte@kavas.online',
                     onPress: () => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                        Linking.openURL('mailto:soporte@alcambio.app');
+                        Linking.openURL('mailto:soporte@kavas.online');
                     }
                 },
                 {
@@ -223,28 +213,6 @@ const SettingsScreen = ({ navigation }) => {
                     onPress: () => {
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         navigation.navigate('Legal');
-                    }
-                },
-                {
-                    id: 'test_notify',
-                    icon: <Bell size={20} color={colors.bcvGreen} />,
-                    label: 'Enviar Prueba',
-                    subtitle: 'Ver cómo llegan las alertas',
-                    onPress: async () => {
-                        const { status } = await Notifications.getPermissionsAsync();
-                        if (status !== 'granted') {
-                            showToast('Primero activa las notificaciones', 'error');
-                            return;
-                        }
-                        await Notifications.scheduleNotificationAsync({
-                            content: {
-                                title: '🔔 Prueba de Alerta',
-                                body: '¡Así es como recibirás tus reportes de tasas!',
-                                data: { screen: 'Inicio' },
-                            },
-                            trigger: null,
-                        });
-                        showToast('Prueba enviada', 'success');
                     }
                 },
             ]
@@ -288,8 +256,17 @@ const SettingsScreen = ({ navigation }) => {
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
             <View style={styles.header}>
-                <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Ajustes</Text>
-                <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Configuración y transparencia</Text>
+                <View style={styles.headerLeft}>
+                    <Image
+                        source={require('../../assets/logo.png')}
+                        style={styles.headerLogo}
+                        resizeMode="contain"
+                    />
+                    <View>
+                        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Ajustes</Text>
+                        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Configuración y transparencia</Text>
+                    </View>
+                </View>
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -313,6 +290,8 @@ const SettingsScreen = ({ navigation }) => {
                     </View>
                 ))}
 
+                <NativeAdComponent style={{ marginHorizontal: 0, marginBottom: 20 }} />
+
                 <View style={styles.footer}>
                     <Text style={[styles.versionText, { color: colors.textSecondary }]}>Kuanto v1.0.0</Text>
                     <Text style={[styles.creatorText, { color: isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)' }]}>
@@ -320,6 +299,7 @@ const SettingsScreen = ({ navigation }) => {
                     </Text>
                 </View>
             </ScrollView>
+            <AdBanner style={styles.adBanner} />
         </View>
     );
 };
@@ -329,9 +309,21 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
+        flexDirection: 'row',
+        alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 24,
         marginTop: 8,
+    },
+    headerLeft: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        flex: 1,
+    },
+    headerLogo: {
+        width: 60,
+        height: 60,
     },
     headerTitle: {
         fontSize: 32,
@@ -345,7 +337,13 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         paddingHorizontal: 20,
-        paddingBottom: 40,
+        paddingBottom: 160,
+    },
+    adBanner: {
+        position: 'absolute',
+        bottom: 95,
+        left: 0,
+        right: 0,
     },
     section: {
         marginBottom: 24,
