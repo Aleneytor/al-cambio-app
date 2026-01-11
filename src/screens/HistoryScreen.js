@@ -209,24 +209,11 @@ const HistoryScreen = ({ navigation }) => {
                         endFillColor={colors.background}
                         startOpacity={0.3}
                         endOpacity={0.05}
-                        pointerConfig={{
-                            pointerStripUptoDataPoint: true,
-                            pointerStripColor: chartConfig.color,
-                            pointerStripWidth: 2,
-                            strokeDashArray: [4, 4],
-                            pointerColor: chartConfig.color,
-                            radius: 8,
-                            pointerLabelWidth: 120,
-                            pointerLabelHeight: 40,
-                            activatePointersOnLongPress: false,
-                            autoAdjustPointerLabelPosition: true,
-                            pointerLabelComponent: items => {
-                                if (items[0]) {
-                                    Haptics.selectionAsync();
-                                    setSelectedPoint(items[0]);
-                                }
-                                return null;
-                            },
+                        onPress={(item) => {
+                            if (item) {
+                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                setSelectedPoint(item);
+                            }
                         }}
                     />
                 </View>
